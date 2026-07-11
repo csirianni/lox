@@ -4,6 +4,7 @@ use std::io::{self, Write};
 
 use crate::scanner::Scanner;
 
+mod expr;
 mod scanner;
 mod token;
 mod token_type;
