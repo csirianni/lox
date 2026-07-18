@@ -1,0 +1,74 @@
+use std::fs;
+use std::io::{self, Write};
+
+use crate::parser::Parser;
+use crate::scanner::Scanner;
+use crate::token::Token;
+use crate::token_type::TokenType;
+
+pub struct Lox {
+    had_error: bool,
+}
+
+impl Lox {
+    pub fn new() -> Self {
+        Lox { had_error: false }
+    }
+
+    pub fn run_file(&mut self, path: &str) -> io::Result<()> {
+        let content = fs::read_to_string(path)?;
+        self.run(content);
+
+        if self.had_error {
+            std::process::exit(65);
+        }
+
+        Ok(())
+    }
+
+    pub fn run_prompt(&mut self) -> io::Result<()> {
+        loop {
+            print!("> ");
+            io::stdout().flush()?;
+            let mut line = String::new();
+            io::stdin().read_line(&mut line)?;
+            if line == "" {
+                return Ok(());
+            }
+            self.run(line);
+            // If the user makes a mistake, it shouldn’t kill their entire session.
+            self.had_error = false;
+        }
+    }
+
+    fn run(&mut self, line: String) {
+        let mut scanner = Scanner::new(line.to_owned());
+        let tokens = scanner.scan_tokens(self);
+
+        let mut parser = Parser::new(tokens, self);
+        let expression = parser.parse();
+        // TODO: We can derive the had_error from expression.is_none(). Do we need that struct field
+        // at all?
+        if self.had_error || expression.is_none() {
+            return;
+        }
+        println!("{}", expression.unwrap());
+    }
+
+    pub fn scanner_error(&mut self, line: usize, message: String) {
+        self.report(line, "".to_string(), message);
+    }
+
+    fn report(&mut self, line: usize, location: String, message: String) {
+        println!("[line {}] Error{}: {}", line, location, message);
+        self.had_error = true;
+    }
+
+    pub fn parser_error(&mut self, token: Token, message: String) {
+        if token.token_type == TokenType::EOF {
+            self.report(token.line, " at end".to_string(), message);
+        } else {
+            self.report(token.line, format!(" at '{}'", token.lexeme), message);
+        }
+    }
+}

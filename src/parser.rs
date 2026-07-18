@@ -1,3 +1,4 @@
+use crate::Lox;
 use crate::expr::Expr;
 use crate::token::{Literal, Token};
 use crate::token_type::TokenType;
@@ -20,14 +21,19 @@ struct ParserError {
 ///                | primary ;
 /// primary        → NUMBER | STRING | "true" | "false" | "nil"
 ///                | "(" expression ")" ;
-struct Parser {
+pub struct Parser<'a> {
     tokens: Vec<Token>,
     current: usize,
+    lox: &'a mut Lox,
 }
 
-impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0 }
+impl<'a> Parser<'a> {
+    pub fn new(tokens: Vec<Token>, lox: &'a mut Lox) -> Self {
+        Self {
+            tokens,
+            current: 0,
+            lox,
+        }
     }
 
     pub fn parse(&mut self) -> Option<Expr> {
@@ -35,15 +41,60 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr> {
-        unimplemented!();
+        self.equality()
     }
 
-    fn term(&mut self) -> Result<Expr> {
-        unimplemented!();
+    fn equality(&mut self) -> Result<Expr> {
+        let mut expr = self.comparison()?;
+
+        while self.match_types(&[TokenType::EqualEqual, TokenType::BangEqual]) {
+            let operator = self.previous();
+            let right = self.comparison()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        return Ok(expr);
     }
 
     fn comparison(&mut self) -> Result<Expr> {
-        unimplemented!();
+        let mut expr = self.term()?;
+
+        while self.match_types(&[
+            TokenType::Less,
+            TokenType::LessEqual,
+            TokenType::Greater,
+            TokenType::GreaterEqual,
+        ]) {
+            let operator = self.previous();
+            let right = self.term()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        return Ok(expr);
+    }
+
+    fn term(&mut self) -> Result<Expr> {
+        let mut expr = self.factor()?;
+
+        while self.match_types(&[TokenType::Minus, TokenType::Plus]) {
+            let operator = self.previous();
+            let right = self.factor()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        return Ok(expr);
     }
 
     fn factor(&mut self) -> Result<Expr> {
@@ -147,11 +198,41 @@ impl Parser {
         if self.check(token_type) {
             Ok(self.advance())
         } else {
-            // TODO: Update Lox error.
-            Err(ParserError {
-                token: self.peek(),
-                message: message,
-            })
+            Err(self.error(self.peek(), message))
+        }
+    }
+
+    fn error(&mut self, token: Token, message: String) -> ParserError {
+        self.lox.parser_error(token.clone(), message.clone());
+        ParserError {
+            token: token,
+            message: message,
+        }
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().token_type == TokenType::Semicolon {
+                return;
+            }
+
+            match self.peek().token_type {
+                TokenType::Class
+                | TokenType::Fun
+                | TokenType::Var
+                | TokenType::For
+                | TokenType::If
+                | TokenType::While
+                | TokenType::Print
+                | TokenType::Return => {
+                    return;
+                }
+                _ => {}
+            }
+
+            self.advance();
         }
     }
 }
@@ -160,6 +241,46 @@ impl Parser {
 mod tests {
     use super::*;
     use crate::token_type::TokenType;
+
+    #[test]
+    fn test_malformed_equality() {
+        let tokens = vec![
+            Token {
+                token_type: TokenType::Number,
+                lexeme: "".to_string(),
+                literal: Literal::Number(5_f64),
+                line: 0,
+            },
+            // TODO: Our grammer does not support this token type yet. When we do, this should be a
+            // *syntax* error.
+            Token {
+                token_type: TokenType::Equal,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: "".to_string(),
+                literal: Literal::Number(12_f64),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::EOF,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+        ];
+        let mut lox = Lox::new();
+        let mut parser = Parser::new(tokens, &mut lox);
+        assert_eq!(
+            parser.factor(),
+            Ok(Expr::Literal {
+                value: Literal::Number(5_f64)
+            }),
+        );
+    }
 
     #[test]
     fn test_factor_one_unary() {
@@ -177,7 +298,8 @@ mod tests {
                 line: 0,
             },
         ];
-        let mut parser = Parser::new(tokens);
+        let mut lox = Lox::new();
+        let mut parser = Parser::new(tokens, &mut lox);
         assert_eq!(
             parser.factor(),
             Ok(Expr::Literal {
@@ -214,7 +336,8 @@ mod tests {
                 line: 0,
             },
         ];
-        let mut parser = Parser::new(tokens);
+        let mut lox = Lox::new();
+        let mut parser = Parser::new(tokens, &mut lox);
         assert_eq!(
             parser.factor(),
             Ok(Expr::Binary {
@@ -274,7 +397,8 @@ mod tests {
                 line: 0,
             },
         ];
-        let mut parser = Parser::new(tokens);
+        let mut lox = Lox::new();
+        let mut parser = Parser::new(tokens, &mut lox);
         assert_eq!(
             parser.factor(),
             // Left-associative implies 5 / 12 * 32 = (5 / 12) * 32.

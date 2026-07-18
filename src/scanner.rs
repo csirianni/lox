@@ -103,7 +103,7 @@ impl Scanner {
                 } else if is_alpha(c) {
                     self.identifier();
                 } else {
-                    lox.error(self.line, "Unexpected character.".to_string());
+                    lox.scanner_error(self.line, "Unexpected character.".to_string());
                 }
             }
         }
@@ -168,7 +168,7 @@ impl Scanner {
         }
 
         if self.is_at_end() {
-            lox.error(self.line, "Unterminated string.".to_string());
+            lox.scanner_error(self.line, "Unterminated string.".to_string());
             return;
         }
 
