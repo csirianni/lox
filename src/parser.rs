@@ -47,19 +47,19 @@ impl Parser {
     }
 
     fn factor(&mut self) -> Result<Expr> {
-        let left = self.unary()?;
+        let mut expr = self.unary()?;
 
-        if self.match_types(&[TokenType::Slash, TokenType::Star]) {
+        while self.match_types(&[TokenType::Slash, TokenType::Star]) {
             let operator = self.previous();
             let right = self.unary()?;
-            Ok(Expr::Binary {
-                left: Box::new(left),
+            expr = Expr::Binary {
+                left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            })
-        } else {
-            self.unary()
+            };
         }
+
+        return Ok(expr);
     }
 
     fn unary(&mut self) -> Result<Expr> {
@@ -162,6 +162,31 @@ mod tests {
     use crate::token_type::TokenType;
 
     #[test]
+    fn test_factor_one_unary() {
+        let tokens = vec![
+            Token {
+                token_type: TokenType::Number,
+                lexeme: "".to_string(),
+                literal: Literal::Number(5_f64),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::EOF,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+        ];
+        let mut parser = Parser::new(tokens);
+        assert_eq!(
+            parser.factor(),
+            Ok(Expr::Literal {
+                value: Literal::Number(5_f64)
+            },)
+        );
+    }
+
+    #[test]
     fn test_factor_two_unary() {
         let tokens = vec![
             Token {
@@ -180,6 +205,12 @@ mod tests {
                 token_type: TokenType::Number,
                 lexeme: "".to_string(),
                 literal: Literal::Number(12_f64),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::EOF,
+                lexeme: "".to_string(),
+                literal: Literal::None,
                 line: 0,
             },
         ];
@@ -236,34 +267,41 @@ mod tests {
                 literal: Literal::Number(32_f64),
                 line: 0,
             },
+            Token {
+                token_type: TokenType::EOF,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
         ];
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.factor(),
+            // Left-associative implies 5 / 12 * 32 = (5 / 12) * 32.
             Ok(Expr::Binary {
-                left: Box::new(Expr::Literal {
-                    value: Literal::Number(5_f64)
-                }),
-                operator: Token {
-                    token_type: TokenType::Slash,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
-                },
-                right: Box::new(Expr::Binary {
+                left: Box::new(Expr::Binary {
                     left: Box::new(Expr::Literal {
-                        value: Literal::Number(12_f64)
+                        value: Literal::Number(5_f64)
                     }),
                     operator: Token {
-                        token_type: TokenType::Star,
+                        token_type: TokenType::Slash,
                         lexeme: "".to_string(),
                         literal: Literal::None,
                         line: 0,
                     },
                     right: Box::new(Expr::Literal {
-                        value: Literal::Number(32_f64)
+                        value: Literal::Number(12_f64)
                     })
-                })
+                }),
+                operator: Token {
+                    token_type: TokenType::Star,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                right: Box::new(Expr::Literal {
+                    value: Literal::Number(32_f64)
+                }),
             })
         );
     }
