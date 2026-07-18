@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::token::{Literal, Token};
 
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     Literal {
         value: Literal,
