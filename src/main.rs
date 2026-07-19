@@ -4,6 +4,7 @@ use std::io;
 use crate::lox::Lox;
 
 mod expr;
+mod interpreter;
 mod lox;
 mod parser;
 mod scanner;
