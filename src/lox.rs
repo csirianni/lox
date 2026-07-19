@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::{self, Write};
 
+use crate::interpreter::{RuntimeError, interpret};
 use crate::parser::Parser;
 use crate::scanner::Scanner;
 use crate::token::Token;
@@ -8,11 +9,15 @@ use crate::token_type::TokenType;
 
 pub struct Lox {
     had_error: bool,
+    had_runtime_error: bool,
 }
 
 impl Lox {
     pub fn new() -> Self {
-        Lox { had_error: false }
+        Lox {
+            had_error: false,
+            had_runtime_error: false,
+        }
     }
 
     pub fn run_file(&mut self, path: &str) -> io::Result<()> {
@@ -21,6 +26,10 @@ impl Lox {
 
         if self.had_error {
             std::process::exit(65);
+        }
+
+        if self.had_runtime_error {
+            std::process::exit(70);
         }
 
         Ok(())
@@ -52,7 +61,10 @@ impl Lox {
         if self.had_error || expression.is_none() {
             return;
         }
-        println!("{}", expression.unwrap());
+        match interpret(expression.unwrap()) {
+            Ok(value) => println!("{}", value),
+            Err(error) => self.interpreter_error(error),
+        }
     }
 
     pub fn scanner_error(&mut self, line: usize, message: String) {
@@ -70,5 +82,10 @@ impl Lox {
         } else {
             self.report(token.line, format!(" at '{}'", token.lexeme), message);
         }
+    }
+
+    pub fn interpreter_error(&mut self, error: RuntimeError) {
+        eprintln!("{} \n[line {}]", error.message, error.token.line);
+        self.had_runtime_error = true;
     }
 }
