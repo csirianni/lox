@@ -1,4 +1,5 @@
 use crate::expr::Expr;
+use crate::stmt::Stmt;
 use crate::token::{Literal, Token};
 use crate::token_type::TokenType;
 use crate::value::Value;
@@ -11,7 +12,29 @@ pub struct RuntimeError {
     pub message: String,
 }
 
-pub fn interpret(expression: Expr) -> Result<Value> {
+pub fn interpret(statements: Vec<Stmt>) -> Result<()> {
+    for statement in statements.into_iter() {
+        execute(statement)?;
+    }
+    Ok(())
+}
+
+fn execute(stmt: Stmt) -> Result<()> {
+    match stmt {
+        Stmt::Expression { expression } => {
+            // We disregard the value because it is unused. We could actually optimize this
+            // entire term out.
+            let _ = evaluate(expression)?;
+        }
+        Stmt::Print { expression } => {
+            let value = evaluate(expression)?;
+            println!("{}", value);
+        }
+    }
+    Ok(())
+}
+
+fn evaluate(expression: Expr) -> Result<Value> {
     match expression {
         Expr::Literal { value } => match value {
             Literal::String(str) => Ok(Value::String(str)),
@@ -19,9 +42,9 @@ pub fn interpret(expression: Expr) -> Result<Value> {
             Literal::Boolean(bool) => Ok(Value::Boolean(bool)),
             Literal::None => Ok(Value::None),
         },
-        Expr::Grouping { expression } => interpret(*expression),
+        Expr::Grouping { expression } => evaluate(*expression),
         Expr::Unary { operator, right } => {
-            let value = interpret(*right);
+            let value = evaluate(*right);
             match operator.token_type {
                 TokenType::Minus => {
                     let Ok(Value::Number(num)) = value else {
@@ -58,17 +81,17 @@ pub fn interpret(expression: Expr) -> Result<Value> {
             if operator.token_type == TokenType::BangEqual
                 || operator.token_type == TokenType::EqualEqual
             {
-                let left = interpret(*left);
-                let right = interpret(*right);
+                let left = evaluate(*left);
+                let right = evaluate(*right);
                 Ok(Value::Boolean(left == right))
             } else {
-                let Value::Number(left) = interpret(*left)? else {
+                let Value::Number(left) = evaluate(*left)? else {
                     return Err(RuntimeError {
                         token: operator,
                         message: "Expected type Value::Number for numeric operator".to_string(),
                     });
                 };
-                let Value::Number(right) = interpret(*right)? else {
+                let Value::Number(right) = evaluate(*right)? else {
                     return Err(RuntimeError {
                         token: operator,
                         message: "Expected type Value::Number for numeric operator".to_string(),
@@ -100,7 +123,7 @@ mod tests {
     #[test]
     fn test_interpret_unary() {
         assert_eq!(
-            interpret(Expr::Unary {
+            evaluate(Expr::Unary {
                 operator: Token {
                     token_type: TokenType::Bang,
                     lexeme: "".to_string(),
@@ -114,7 +137,7 @@ mod tests {
             Ok(Value::Boolean(true))
         );
         assert_eq!(
-            interpret(Expr::Unary {
+            evaluate(Expr::Unary {
                 operator: Token {
                     token_type: TokenType::Bang,
                     lexeme: "".to_string(),
@@ -128,7 +151,7 @@ mod tests {
             Ok(Value::Boolean(false))
         );
         assert_eq!(
-            interpret(Expr::Unary {
+            evaluate(Expr::Unary {
                 operator: Token {
                     token_type: TokenType::Minus,
                     lexeme: "".to_string(),
@@ -142,7 +165,7 @@ mod tests {
             Ok(Value::Number(13_f64))
         );
         assert_eq!(
-            interpret(Expr::Unary {
+            evaluate(Expr::Unary {
                 operator: Token {
                     token_type: TokenType::Minus,
                     lexeme: "".to_string(),
@@ -160,7 +183,7 @@ mod tests {
     #[test]
     fn test_interpret_unary_bang_number() {
         assert_eq!(
-            interpret(Expr::Unary {
+            evaluate(Expr::Unary {
                 operator: Token {
                     token_type: TokenType::Bang,
                     lexeme: "".to_string(),
@@ -186,7 +209,7 @@ mod tests {
     #[test]
     fn test_interpret_binary() {
         assert_eq!(
-            interpret(Expr::Binary {
+            evaluate(Expr::Binary {
                 left: Box::new(Expr::Literal {
                     value: Literal::None
                 }),
@@ -203,7 +226,7 @@ mod tests {
             Ok(Value::Boolean(true))
         );
         assert_eq!(
-            interpret(Expr::Binary {
+            evaluate(Expr::Binary {
                 left: Box::new(Expr::Literal {
                     value: Literal::None
                 }),

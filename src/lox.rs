@@ -55,15 +55,14 @@ impl Lox {
         let tokens = scanner.scan_tokens(self);
 
         let mut parser = Parser::new(tokens, self);
-        let expression = parser.parse();
+        let statements = parser.parse();
         // TODO: We can derive the had_error from expression.is_none(). Do we need that struct field
         // at all?
-        if self.had_error || expression.is_none() {
+        if self.had_error || statements.is_none() {
             return;
         }
-        match interpret(expression.unwrap()) {
-            Ok(value) => println!("{}", value),
-            Err(error) => self.interpreter_error(error),
+        if let Err(error) = interpret(statements.unwrap()) {
+            self.interpreter_error(error)
         }
     }
 

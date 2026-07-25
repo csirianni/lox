@@ -1,5 +1,6 @@
 use crate::Lox;
 use crate::expr::Expr;
+use crate::stmt::Stmt;
 use crate::token::{Literal, Token};
 use crate::token_type::TokenType;
 
@@ -36,8 +37,36 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Option<Expr> {
-        self.expression().ok()
+    pub fn parse(&mut self) -> Option<Vec<Stmt>> {
+        let mut statements = Vec::<Stmt>::new();
+        while !self.is_at_end() {
+            // FIX: Remove unwrap() and propogate error.
+            statements.push(self.statement().unwrap());
+        }
+        Some(statements)
+    }
+
+    fn statement(&mut self) -> Result<Stmt> {
+        if self.match_types(&[TokenType::Print]) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> Result<Stmt> {
+        let value = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after value".to_string())?;
+        Ok(Stmt::Print { expression: value })
+    }
+
+    fn expression_statement(&mut self) -> Result<Stmt> {
+        let value = self.expression()?;
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after expression".to_string(),
+        )?;
+        Ok(Stmt::Expression { expression: value })
     }
 
     fn expression(&mut self) -> Result<Expr> {
