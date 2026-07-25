@@ -30,7 +30,7 @@ pub fn interpret(expression: Expr) -> Result<Value> {
                             message: "Expected type Value::Number for - operator".to_string(),
                         });
                     };
-                    return Ok(Value::Number(-1.0 * num));
+                    Ok(Value::Number(-num))
                 }
                 TokenType::Bang => {
                     // No truthy/falsey values. All expressions must explicitly evaluate to a
@@ -60,7 +60,7 @@ pub fn interpret(expression: Expr) -> Result<Value> {
             {
                 let left = interpret(*left);
                 let right = interpret(*right);
-                return Ok(Value::Boolean(left == right));
+                Ok(Value::Boolean(left == right))
             } else {
                 let Value::Number(left) = interpret(*left)? else {
                     return Err(RuntimeError {
@@ -75,31 +75,17 @@ pub fn interpret(expression: Expr) -> Result<Value> {
                     });
                 };
                 match operator.token_type {
-                    TokenType::Minus => {
-                        return Ok(Value::Number(left - right));
-                    }
-                    TokenType::Plus => {
-                        return Ok(Value::Number(left + right));
-                    }
+                    TokenType::Minus => Ok(Value::Number(left - right)),
+                    TokenType::Plus => Ok(Value::Number(left + right)),
                     TokenType::Slash => {
                         // TODO: We should probably handle division by zero as a runtime error.
-                        return Ok(Value::Number(left / right));
+                        Ok(Value::Number(left / right))
                     }
-                    TokenType::Star => {
-                        return Ok(Value::Number(left * right));
-                    }
-                    TokenType::Greater => {
-                        return Ok(Value::Boolean(left > right));
-                    }
-                    TokenType::GreaterEqual => {
-                        return Ok(Value::Boolean(left >= right));
-                    }
-                    TokenType::Less => {
-                        return Ok(Value::Boolean(left < right));
-                    }
-                    TokenType::LessEqual => {
-                        return Ok(Value::Boolean(left <= right));
-                    }
+                    TokenType::Star => Ok(Value::Number(left * right)),
+                    TokenType::Greater => Ok(Value::Boolean(left > right)),
+                    TokenType::GreaterEqual => Ok(Value::Boolean(left >= right)),
+                    TokenType::Less => Ok(Value::Boolean(left < right)),
+                    TokenType::LessEqual => Ok(Value::Boolean(left <= right)),
                     _ => unreachable!(),
                 }
             }

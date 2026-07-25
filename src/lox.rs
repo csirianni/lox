@@ -41,7 +41,7 @@ impl Lox {
             io::stdout().flush()?;
             let mut line = String::new();
             io::stdin().read_line(&mut line)?;
-            if line == "" {
+            if line.trim_end().is_empty() {
                 return Ok(());
             }
             self.run(line);
@@ -77,7 +77,7 @@ impl Lox {
     }
 
     pub fn parser_error(&mut self, token: Token, message: String) {
-        if token.token_type == TokenType::EOF {
+        if token.token_type == TokenType::Eof {
             self.report(token.line, " at end".to_string(), message);
         } else {
             self.report(token.line, format!(" at '{}'", token.lexeme), message);

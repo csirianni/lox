@@ -57,7 +57,7 @@ impl<'a> Parser<'a> {
             };
         }
 
-        return Ok(expr);
+        Ok(expr)
     }
 
     fn comparison(&mut self) -> Result<Expr> {
@@ -78,7 +78,7 @@ impl<'a> Parser<'a> {
             };
         }
 
-        return Ok(expr);
+        Ok(expr)
     }
 
     fn term(&mut self) -> Result<Expr> {
@@ -94,7 +94,7 @@ impl<'a> Parser<'a> {
             };
         }
 
-        return Ok(expr);
+        Ok(expr)
     }
 
     fn factor(&mut self) -> Result<Expr> {
@@ -110,7 +110,7 @@ impl<'a> Parser<'a> {
             };
         }
 
-        return Ok(expr);
+        Ok(expr)
     }
 
     fn unary(&mut self) -> Result<Expr> {
@@ -176,7 +176,7 @@ impl<'a> Parser<'a> {
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek().token_type == TokenType::EOF
+        self.peek().token_type == TokenType::Eof
     }
 
     fn peek(&self) -> Token {
@@ -204,10 +204,7 @@ impl<'a> Parser<'a> {
 
     fn error(&mut self, token: Token, message: String) -> ParserError {
         self.lox.parser_error(token.clone(), message.clone());
-        ParserError {
-            token: token,
-            message: message,
-        }
+        ParserError { token, message }
     }
 
     fn synchronize(&mut self) {
@@ -266,7 +263,7 @@ mod tests {
                 line: 0,
             },
             Token {
-                token_type: TokenType::EOF,
+                token_type: TokenType::Eof,
                 lexeme: "".to_string(),
                 literal: Literal::None,
                 line: 0,
@@ -292,7 +289,7 @@ mod tests {
                 line: 0,
             },
             Token {
-                token_type: TokenType::EOF,
+                token_type: TokenType::Eof,
                 lexeme: "".to_string(),
                 literal: Literal::None,
                 line: 0,
@@ -330,7 +327,7 @@ mod tests {
                 line: 0,
             },
             Token {
-                token_type: TokenType::EOF,
+                token_type: TokenType::Eof,
                 lexeme: "".to_string(),
                 literal: Literal::None,
                 line: 0,
@@ -391,7 +388,7 @@ mod tests {
                 line: 0,
             },
             Token {
-                token_type: TokenType::EOF,
+                token_type: TokenType::Eof,
                 lexeme: "".to_string(),
                 literal: Literal::None,
                 line: 0,

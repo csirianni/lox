@@ -29,13 +29,13 @@ impl Scanner {
         }
 
         self.tokens.push(Token {
-            token_type: EOF,
+            token_type: Eof,
             lexeme: String::new(),
             literal: Literal::None,
             line: self.line,
         });
 
-        return self.tokens.clone();
+        self.tokens.clone()
     }
 
     fn scan_token(&mut self, lox: &mut Lox) {
@@ -112,7 +112,7 @@ impl Scanner {
     fn advance(&mut self) -> char {
         let char = self.source.chars().nth(self.current).unwrap();
         self.current += 1;
-        return char;
+        char
     }
 
     fn add_token(&mut self, token_type: TokenType) {
@@ -124,7 +124,7 @@ impl Scanner {
         self.tokens.push(Token {
             token_type,
             lexeme: text.to_string(),
-            literal: literal,
+            literal,
             line: self.line,
         });
     }
@@ -138,7 +138,7 @@ impl Scanner {
         }
 
         self.current += 1;
-        return true;
+        true
     }
 
     fn is_at_end(&self) -> bool {
@@ -149,14 +149,14 @@ impl Scanner {
         if self.is_at_end() {
             return '\0';
         }
-        return self.source.chars().nth(self.current).unwrap();
+        self.source.chars().nth(self.current).unwrap()
     }
 
     fn peek_next(&self) -> char {
         if self.current + 1 >= self.source.len() {
             return '\0';
         }
-        return self.source.chars().nth(self.current + 1).unwrap();
+        self.source.chars().nth(self.current + 1).unwrap()
     }
 
     fn string(&mut self, lox: &mut Lox) {
@@ -212,15 +212,16 @@ impl Scanner {
 }
 
 fn is_alpha(c: char) -> bool {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+    c.is_ascii_alphabetic() || c == '_'
 }
 
 fn is_digit(c: char) -> bool {
-    return c >= '0' && c <= '9';
+    c.is_ascii_digit()
 }
 
+// TODO: There is a rust implementation of is_ascii_alphanumeric().
 fn is_alpha_numeric(c: char) -> bool {
-    return is_alpha(c) || is_digit(c);
+    is_alpha(c) || is_digit(c)
 }
 
 fn keyword(s: &str) -> Option<TokenType> {
