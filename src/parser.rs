@@ -1,4 +1,3 @@
-use crate::Lox;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
 use crate::token::{Literal, Token};
@@ -7,9 +6,9 @@ use crate::token_type::TokenType;
 type Result<T> = std::result::Result<T, ParserError>;
 
 #[derive(Debug, Clone, PartialEq)]
-struct ParserError {
-    token: Token,
-    message: String,
+pub struct ParserError {
+    pub token: Token,
+    pub message: String,
 }
 
 /// https://craftinginterpreters.com/parsing-expressions.html
@@ -22,28 +21,22 @@ struct ParserError {
 ///                | primary ;
 /// primary        → NUMBER | STRING | "true" | "false" | "nil"
 ///                | "(" expression ")" ;
-pub struct Parser<'a> {
+pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
-    lox: &'a mut Lox,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(tokens: Vec<Token>, lox: &'a mut Lox) -> Self {
-        Self {
-            tokens,
-            current: 0,
-            lox,
-        }
+impl Parser {
+    pub fn new(tokens: Vec<Token>) -> Self {
+        Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Option<Vec<Stmt>> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>> {
         let mut statements = Vec::<Stmt>::new();
         while !self.is_at_end() {
-            // FIX: Remove unwrap() and propogate error.
-            statements.push(self.statement().unwrap());
+            statements.push(self.statement()?);
         }
-        Some(statements)
+        Ok(statements)
     }
 
     fn statement(&mut self) -> Result<Stmt> {
@@ -232,7 +225,6 @@ impl<'a> Parser<'a> {
     }
 
     fn error(&mut self, token: Token, message: String) -> ParserError {
-        self.lox.parser_error(token.clone(), message.clone());
         ParserError { token, message }
     }
 
@@ -298,8 +290,7 @@ mod tests {
                 line: 0,
             },
         ];
-        let mut lox = Lox::new();
-        let mut parser = Parser::new(tokens, &mut lox);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.factor(),
             Ok(Expr::Literal {
@@ -324,8 +315,7 @@ mod tests {
                 line: 0,
             },
         ];
-        let mut lox = Lox::new();
-        let mut parser = Parser::new(tokens, &mut lox);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.factor(),
             Ok(Expr::Literal {
@@ -362,8 +352,7 @@ mod tests {
                 line: 0,
             },
         ];
-        let mut lox = Lox::new();
-        let mut parser = Parser::new(tokens, &mut lox);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.factor(),
             Ok(Expr::Binary {
@@ -423,8 +412,7 @@ mod tests {
                 line: 0,
             },
         ];
-        let mut lox = Lox::new();
-        let mut parser = Parser::new(tokens, &mut lox);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.factor(),
             // Left-associative implies 5 / 12 * 32 = (5 / 12) * 32.

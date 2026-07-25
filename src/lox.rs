@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{self, Write};
 
 use crate::interpreter::{RuntimeError, interpret};
-use crate::parser::Parser;
+use crate::parser::{Parser, ParserError};
 use crate::scanner::Scanner;
 use crate::token::Token;
 use crate::token_type::TokenType;
@@ -54,15 +54,16 @@ impl Lox {
         let mut scanner = Scanner::new(line.to_owned());
         let tokens = scanner.scan_tokens(self);
 
-        let mut parser = Parser::new(tokens, self);
-        let statements = parser.parse();
-        // TODO: We can derive the had_error from expression.is_none(). Do we need that struct field
-        // at all?
-        if self.had_error || statements.is_none() {
-            return;
-        }
-        if let Err(error) = interpret(statements.unwrap()) {
-            self.interpreter_error(error)
+        let mut parser = Parser::new(tokens);
+        match parser.parse() {
+            Ok(statements) => {
+                if let Err(error) = interpret(statements) {
+                    self.interpreter_error(error)
+                }
+            }
+            Err(ParserError { token, message }) => {
+                self.parser_error(token, message);
+            }
         }
     }
 
@@ -70,12 +71,7 @@ impl Lox {
         self.report(line, "".to_string(), message);
     }
 
-    fn report(&mut self, line: usize, location: String, message: String) {
-        println!("[line {}] Error{}: {}", line, location, message);
-        self.had_error = true;
-    }
-
-    pub fn parser_error(&mut self, token: Token, message: String) {
+    fn parser_error(&mut self, token: Token, message: String) {
         if token.token_type == TokenType::Eof {
             self.report(token.line, " at end".to_string(), message);
         } else {
@@ -83,8 +79,44 @@ impl Lox {
         }
     }
 
-    pub fn interpreter_error(&mut self, error: RuntimeError) {
+    fn report(&mut self, line: usize, location: String, message: String) {
+        println!("[line {}] Error{}: {}", line, location, message);
+        self.had_error = true;
+    }
+
+    fn interpreter_error(&mut self, error: RuntimeError) {
         eprintln!("{} \n[line {}]", error.message, error.token.line);
         self.had_runtime_error = true;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parser_error() {
+        let mut lox = Lox::new();
+        // No semicolon.
+        lox.run("print 1".to_string());
+        assert!(lox.had_error);
+        assert!(!lox.had_runtime_error);
+    }
+
+    #[test]
+    fn test_runtime_error() {
+        let mut lox = Lox::new();
+        // Runtime type error.
+        lox.run("1 + false;".to_string());
+        assert!(!lox.had_error);
+        assert!(lox.had_runtime_error);
+    }
+
+    #[test]
+    fn test_statement() {
+        let mut lox = Lox::new();
+        lox.run("print 1 + 2;".to_string());
+        assert!(!lox.had_error);
+        assert!(!lox.had_runtime_error);
     }
 }
