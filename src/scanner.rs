@@ -98,9 +98,9 @@ impl Scanner {
             '\n' => self.line += 1,
             '"' => self.string(lox),
             _ => {
-                if is_digit(c) {
+                if c.is_ascii_digit() {
                     self.number();
-                } else if is_alpha(c) {
+                } else if is_alpha(&c) {
                     self.identifier();
                 } else {
                     lox.scanner_error(self.line, "Unexpected character.".to_string());
@@ -181,14 +181,14 @@ impl Scanner {
     }
 
     fn number(&mut self) {
-        while is_digit(self.peek()) {
+        while self.peek().is_ascii_digit() {
             self.advance();
         }
         // Look for a fractional part.
-        if self.peek() == '.' && is_digit(self.peek_next()) {
+        if self.peek() == '.' && self.peek_next().is_ascii_digit() {
             // Consume the "."
             self.advance();
-            while is_digit(self.peek()) {
+            while self.peek().is_ascii_digit() {
                 self.advance();
             }
         }
@@ -200,7 +200,7 @@ impl Scanner {
     }
 
     fn identifier(&mut self) {
-        while is_alpha_numeric(self.peek()) {
+        while is_alpha_numeric(&self.peek()) {
             self.advance();
         }
         if let Some(token_type) = keyword(&self.source[self.start..self.current]) {
@@ -211,17 +211,14 @@ impl Scanner {
     }
 }
 
-fn is_alpha(c: char) -> bool {
-    c.is_ascii_alphabetic() || c == '_'
+// We can't use the native is_ascii_alphanumeric() because we want to include '_' in the set of
+// eligible identifier characters. TODO: Figure out why we want this.
+fn is_alpha(c: &char) -> bool {
+    c.is_ascii_alphabetic() || c == &'_'
 }
 
-fn is_digit(c: char) -> bool {
-    c.is_ascii_digit()
-}
-
-// TODO: There is a rust implementation of is_ascii_alphanumeric().
-fn is_alpha_numeric(c: char) -> bool {
-    is_alpha(c) || is_digit(c)
+fn is_alpha_numeric(c: &char) -> bool {
+    is_alpha(c) || c.is_ascii_digit()
 }
 
 fn keyword(s: &str) -> Option<TokenType> {
