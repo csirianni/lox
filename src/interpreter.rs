@@ -142,7 +142,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_interpret_unary() {
+    fn test_evaluate_unary() {
         assert_eq!(
             evaluate(
                 Expr::Unary {
@@ -214,7 +214,7 @@ mod tests {
     }
 
     #[test]
-    fn test_interpret_unary_bang_number() {
+    fn test_evaluate_unary_bang_number() {
         assert_eq!(
             evaluate(
                 Expr::Unary {
@@ -243,7 +243,7 @@ mod tests {
     }
 
     #[test]
-    fn test_interpret_binary() {
+    fn test_evaluate_binary() {
         assert_eq!(
             evaluate(
                 Expr::Binary {
