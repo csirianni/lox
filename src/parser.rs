@@ -40,11 +40,16 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Stmt> {
-        if self.match_types(&[TokenType::Var]) {
+        let statement = if self.match_types(&[TokenType::Var]) {
             self.var_declaration()
         } else {
             self.statement()
+        };
+        if statement.is_err() {
+            // TODO: Test this.
+            self.synchronize();
         }
+        statement
     }
 
     fn var_declaration(&mut self) -> Result<Stmt> {
