@@ -41,7 +41,7 @@ mod tests {
         };
         assert_eq!(environment.get(&key), Some(&Value::Number(5_f64)));
 
-        // Re-defining variables in allowed.
+        // Re-defining variables is allowed.
         environment.define("foo", Value::Number(6_f64));
         assert_eq!(environment.get(&key), Some(&Value::Number(6_f64)));
     }
