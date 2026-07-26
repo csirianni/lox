@@ -57,6 +57,8 @@ impl Lox {
         let mut parser = Parser::new(tokens);
         match parser.parse() {
             Ok(statements) => {
+                // FIX: The environment is per-line right now. We need the environment to outlive
+                // this function.
                 if let Err(error) = interpret(statements) {
                     self.interpreter_error(error)
                 }

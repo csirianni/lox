@@ -1,3 +1,4 @@
+use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
 use crate::token::{Literal, Token};
@@ -13,28 +14,41 @@ pub struct RuntimeError {
 }
 
 pub fn interpret(statements: Vec<Stmt>) -> Result<()> {
+    let mut environment = Environment::new();
     for statement in statements.into_iter() {
-        execute(statement)?;
+        execute(statement, &mut environment)?;
     }
     Ok(())
 }
 
-fn execute(stmt: Stmt) -> Result<()> {
+fn execute(stmt: Stmt, environment: &mut Environment) -> Result<()> {
     match stmt {
         Stmt::Expression { expression } => {
             // We disregard the value because it is unused. We could actually optimize this
             // entire term out.
-            let _ = evaluate(expression)?;
+            let _ = evaluate(expression, environment)?;
         }
         Stmt::Print { expression } => {
-            let value = evaluate(expression)?;
+            let value = evaluate(expression, environment)?;
             println!("{}", value);
+        }
+        Stmt::Var { name, initializer } => {
+            let value = if initializer
+                != (Expr::Literal {
+                    value: Literal::None,
+                }) {
+                evaluate(initializer, environment)?
+            } else {
+                // An initializer is optional. The default value is None.
+                Value::None
+            };
+            environment.define(&name.lexeme, value);
         }
     }
     Ok(())
 }
 
-fn evaluate(expression: Expr) -> Result<Value> {
+fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
     match expression {
         Expr::Literal { value } => match value {
             Literal::String(str) => Ok(Value::String(str)),
@@ -42,9 +56,9 @@ fn evaluate(expression: Expr) -> Result<Value> {
             Literal::Boolean(bool) => Ok(Value::Boolean(bool)),
             Literal::None => Ok(Value::None),
         },
-        Expr::Grouping { expression } => evaluate(*expression),
+        Expr::Grouping { expression } => evaluate(*expression, environment),
         Expr::Unary { operator, right } => {
-            let value = evaluate(*right);
+            let value = evaluate(*right, environment);
             match operator.token_type {
                 TokenType::Minus => {
                     let Ok(Value::Number(num)) = value else {
@@ -81,17 +95,17 @@ fn evaluate(expression: Expr) -> Result<Value> {
             if operator.token_type == TokenType::BangEqual
                 || operator.token_type == TokenType::EqualEqual
             {
-                let left = evaluate(*left);
-                let right = evaluate(*right);
+                let left = evaluate(*left, environment);
+                let right = evaluate(*right, environment);
                 Ok(Value::Boolean(left == right))
             } else {
-                let Value::Number(left) = evaluate(*left)? else {
+                let Value::Number(left) = evaluate(*left, environment)? else {
                     return Err(RuntimeError {
                         token: operator,
                         message: "Expected type Value::Number for numeric operator".to_string(),
                     });
                 };
-                let Value::Number(right) = evaluate(*right)? else {
+                let Value::Number(right) = evaluate(*right, environment)? else {
                     return Err(RuntimeError {
                         token: operator,
                         message: "Expected type Value::Number for numeric operator".to_string(),
@@ -113,6 +127,13 @@ fn evaluate(expression: Expr) -> Result<Value> {
                 }
             }
         }
+        Expr::Variable { name } => match environment.get(&name) {
+            Some(value) => Ok(value.clone()),
+            None => Err(RuntimeError {
+                token: name.clone(),
+                message: format!("Undefined variable '{}'", name.lexeme),
+            }),
+        },
     }
 }
 
@@ -123,59 +144,71 @@ mod tests {
     #[test]
     fn test_interpret_unary() {
         assert_eq!(
-            evaluate(Expr::Unary {
-                operator: Token {
-                    token_type: TokenType::Bang,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+            evaluate(
+                Expr::Unary {
+                    operator: Token {
+                        token_type: TokenType::Bang,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    })
                 },
-                right: Box::new(Expr::Literal {
-                    value: Literal::Boolean(false)
-                })
-            }),
+                &mut Environment::new()
+            ),
             Ok(Value::Boolean(true))
         );
         assert_eq!(
-            evaluate(Expr::Unary {
-                operator: Token {
-                    token_type: TokenType::Bang,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+            evaluate(
+                Expr::Unary {
+                    operator: Token {
+                        token_type: TokenType::Bang,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    })
                 },
-                right: Box::new(Expr::Literal {
-                    value: Literal::Boolean(true)
-                })
-            }),
+                &mut Environment::new(),
+            ),
             Ok(Value::Boolean(false))
         );
         assert_eq!(
-            evaluate(Expr::Unary {
-                operator: Token {
-                    token_type: TokenType::Minus,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+            evaluate(
+                Expr::Unary {
+                    operator: Token {
+                        token_type: TokenType::Minus,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(-13_f64)
+                    })
                 },
-                right: Box::new(Expr::Literal {
-                    value: Literal::Number(-13_f64)
-                })
-            }),
+                &mut Environment::new(),
+            ),
             Ok(Value::Number(13_f64))
         );
         assert_eq!(
-            evaluate(Expr::Unary {
-                operator: Token {
-                    token_type: TokenType::Minus,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+            evaluate(
+                Expr::Unary {
+                    operator: Token {
+                        token_type: TokenType::Minus,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(13_f64)
+                    })
                 },
-                right: Box::new(Expr::Literal {
-                    value: Literal::Number(13_f64)
-                })
-            }),
+                &mut Environment::new(),
+            ),
             Ok(Value::Number(-13_f64))
         );
     }
@@ -183,17 +216,20 @@ mod tests {
     #[test]
     fn test_interpret_unary_bang_number() {
         assert_eq!(
-            evaluate(Expr::Unary {
-                operator: Token {
-                    token_type: TokenType::Bang,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+            evaluate(
+                Expr::Unary {
+                    operator: Token {
+                        token_type: TokenType::Bang,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(0_f64),
+                    })
                 },
-                right: Box::new(Expr::Literal {
-                    value: Literal::Number(0_f64),
-                }),
-            }),
+                &mut Environment::new(),
+            ),
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::Bang,
@@ -209,38 +245,74 @@ mod tests {
     #[test]
     fn test_interpret_binary() {
         assert_eq!(
-            evaluate(Expr::Binary {
-                left: Box::new(Expr::Literal {
-                    value: Literal::None
-                }),
-                operator: Token {
-                    token_type: TokenType::EqualEqual,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::None
+                    }),
+                    operator: Token {
+                        token_type: TokenType::EqualEqual,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::None
+                    })
                 },
-                right: Box::new(Expr::Literal {
-                    value: Literal::None
-                }),
-            }),
+                &mut Environment::new(),
+            ),
             Ok(Value::Boolean(true))
         );
         assert_eq!(
-            evaluate(Expr::Binary {
-                left: Box::new(Expr::Literal {
-                    value: Literal::None
-                }),
-                operator: Token {
-                    token_type: TokenType::EqualEqual,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::None
+                    }),
+                    operator: Token {
+                        token_type: TokenType::EqualEqual,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(0_f64)
+                    })
                 },
-                right: Box::new(Expr::Literal {
-                    value: Literal::Number(0_f64)
-                }),
-            }),
+                &mut Environment::new(),
+            ),
             Ok(Value::Boolean(false))
         );
+    }
+
+    #[test]
+    fn test_global_variable() {
+        let mut environment = Environment::new();
+
+        let definition = Stmt::Var {
+            name: Token {
+                token_type: TokenType::Identifier,
+                lexeme: "a".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            initializer: Expr::Literal {
+                value: Literal::Number(5_f64),
+            },
+        };
+        assert!(execute(definition, &mut environment).is_ok());
+
+        let lookup = Expr::Variable {
+            name: Token {
+                token_type: TokenType::Identifier,
+                lexeme: "a".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+        };
+        let value = evaluate(lookup, &mut environment);
+        assert!(value.is_ok());
+        assert_eq!(value.unwrap(), Value::Number(5_f64));
     }
 }

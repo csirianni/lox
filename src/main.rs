@@ -3,6 +3,7 @@ use std::io;
 
 use crate::lox::Lox;
 
+mod environment;
 mod expr;
 mod interpreter;
 mod lox;

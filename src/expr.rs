@@ -19,6 +19,9 @@ pub enum Expr {
     Grouping {
         expression: Box<Expr>,
     },
+    Variable {
+        name: Token,
+    },
 }
 
 impl fmt::Display for Expr {
@@ -32,6 +35,7 @@ impl fmt::Display for Expr {
                 right,
             } => write!(f, "({} {} {})", operator.lexeme, left, right),
             Expr::Grouping { expression } => write!(f, "( {} )", expression),
+            Expr::Variable { name } => write!(f, "{:?}", name),
         }
     }
 }

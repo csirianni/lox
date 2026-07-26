@@ -34,9 +34,33 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Vec<Stmt>> {
         let mut statements = Vec::<Stmt>::new();
         while !self.is_at_end() {
-            statements.push(self.statement()?);
+            statements.push(self.declaration()?);
         }
         Ok(statements)
+    }
+
+    fn declaration(&mut self) -> Result<Stmt> {
+        if self.match_types(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        }
+    }
+
+    fn var_declaration(&mut self) -> Result<Stmt> {
+        let name = self.consume(TokenType::Identifier, "Expect variable name".to_string())?;
+        let initializer = if self.match_types(&[TokenType::Equal]) {
+            self.expression()?
+        } else {
+            Expr::Literal {
+                value: Literal::None,
+            }
+        };
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration".to_string(),
+        )?;
+        Ok(Stmt::Var { name, initializer })
     }
 
     fn statement(&mut self) -> Result<Stmt> {
@@ -173,6 +197,10 @@ impl Parser {
             )?;
             Ok(Expr::Grouping {
                 expression: Box::new(expr),
+            })
+        } else if self.match_types(&[TokenType::Identifier]) {
+            Ok(Expr::Variable {
+                name: self.previous(),
             })
         } else {
             unreachable!();
