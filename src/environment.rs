@@ -3,12 +3,21 @@ use crate::value::Value;
 use std::collections::BTreeMap;
 
 pub struct Environment {
+    enclosing: Option<Box<Environment>>,
     values: BTreeMap<String, Value>,
 }
 
 impl Environment {
-    pub fn new() -> Self {
+    pub fn new_top_level() -> Self {
         Environment {
+            enclosing: None,
+            values: BTreeMap::new(),
+        }
+    }
+
+    pub fn new_block(environment: Environment) -> Self {
+        Environment {
+            enclosing: Some(Box::new(environment)),
             values: BTreeMap::new(),
         }
     }
@@ -18,8 +27,33 @@ impl Environment {
         self.values.insert(name.to_string(), value);
     }
 
+    /// Assigns a new value to `name`, if it exists, and returns the old value. Otherwise, does
+    /// nothing and returns `None`.
+    ///
+    /// The key difference between assignment and definition is that assignment is not allowed to
+    /// create a new variable.
+    pub fn assign(&mut self, name: &str, value: Value) -> Option<Value> {
+        if let Some(entry) = self.values.get_mut(name) {
+            let result = entry.clone();
+            *entry = value;
+            Some(result)
+        } else {
+            match &mut self.enclosing {
+                Some(enclosing) => enclosing.assign(name, value),
+                None => None,
+            }
+        }
+    }
+
     pub fn get(&self, name: &Token) -> Option<&Value> {
-        self.values.get(&name.lexeme)
+        if let Some(value) = self.values.get(&name.lexeme) {
+            Some(value)
+        } else {
+            match &self.enclosing {
+                Some(enclosing) => enclosing.get(name),
+                None => None,
+            }
+        }
     }
 }
 
@@ -31,7 +65,7 @@ mod tests {
 
     #[test]
     fn test_define() {
-        let mut environment = Environment::new();
+        let mut environment = Environment::new_top_level();
         environment.define("foo", Value::Number(5_f64));
         let key = Token {
             token_type: TokenType::Identifier,
@@ -44,5 +78,74 @@ mod tests {
         // Re-defining variables is allowed.
         environment.define("foo", Value::Number(6_f64));
         assert_eq!(environment.get(&key), Some(&Value::Number(6_f64)));
+    }
+
+    #[test]
+    fn test_assign() {
+        let mut environment = Environment::new_top_level();
+        environment.define("foo", Value::Number(5_f64));
+        let key = Token {
+            token_type: TokenType::Identifier,
+            lexeme: "foo".to_string(),
+            literal: Literal::None,
+            line: 0,
+        };
+        assert_eq!(environment.get(&key), Some(&Value::Number(5_f64)));
+
+        assert_eq!(
+            environment.assign("foo", Value::Number(6_f64)),
+            Some(Value::Number(5_f64))
+        );
+        assert_eq!(environment.get(&key), Some(&Value::Number(6_f64)));
+
+        // Undefined variable.
+        assert_eq!(environment.assign("bar", Value::Number(1_f64)), None);
+    }
+
+    #[test]
+    fn test_shadowing() {
+        let mut tle = Environment::new_top_level();
+        tle.define("foo", Value::Number(5_f64));
+
+        let mut block = Environment::new_block(tle);
+        block.define("foo", Value::Number(3_f64));
+        let key = Token {
+            token_type: TokenType::Identifier,
+            lexeme: "foo".to_string(),
+            literal: Literal::None,
+            line: 0,
+        };
+        assert_eq!(block.get(&key), Some(&Value::Number(3_f64)));
+    }
+
+    #[test]
+    fn test_parent_lookup() {
+        let mut tle = Environment::new_top_level();
+        tle.define("foo", Value::Number(5_f64));
+
+        let block = Environment::new_block(tle);
+        let key = Token {
+            token_type: TokenType::Identifier,
+            lexeme: "foo".to_string(),
+            literal: Literal::None,
+            line: 0,
+        };
+        assert_eq!(block.get(&key), Some(&Value::Number(5_f64)));
+    }
+
+    #[test]
+    fn test_parent_assign() {
+        let mut tle = Environment::new_top_level();
+        tle.define("foo", Value::Number(5_f64));
+
+        let mut block = Environment::new_block(tle);
+        block.assign("foo", Value::Number(3_f64));
+        let key = Token {
+            token_type: TokenType::Identifier,
+            lexeme: "foo".to_string(),
+            literal: Literal::None,
+            line: 0,
+        };
+        assert_eq!(block.get(&key), Some(&Value::Number(3_f64)));
     }
 }

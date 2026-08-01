@@ -14,7 +14,7 @@ pub struct RuntimeError {
 }
 
 pub fn interpret(statements: Vec<Stmt>) -> Result<()> {
-    let mut environment = Environment::new();
+    let mut environment = Environment::new_top_level();
     for statement in statements.into_iter() {
         execute(statement, &mut environment)?;
     }
@@ -156,7 +156,7 @@ mod tests {
                         value: Literal::Boolean(false)
                     })
                 },
-                &mut Environment::new()
+                &mut Environment::new_top_level()
             ),
             Ok(Value::Boolean(true))
         );
@@ -173,7 +173,7 @@ mod tests {
                         value: Literal::Boolean(true)
                     })
                 },
-                &mut Environment::new(),
+                &mut Environment::new_top_level(),
             ),
             Ok(Value::Boolean(false))
         );
@@ -190,7 +190,7 @@ mod tests {
                         value: Literal::Number(-13_f64)
                     })
                 },
-                &mut Environment::new(),
+                &mut Environment::new_top_level(),
             ),
             Ok(Value::Number(13_f64))
         );
@@ -207,7 +207,7 @@ mod tests {
                         value: Literal::Number(13_f64)
                     })
                 },
-                &mut Environment::new(),
+                &mut Environment::new_top_level(),
             ),
             Ok(Value::Number(-13_f64))
         );
@@ -228,7 +228,7 @@ mod tests {
                         value: Literal::Number(0_f64),
                     })
                 },
-                &mut Environment::new(),
+                &mut Environment::new_top_level(),
             ),
             Err(RuntimeError {
                 token: Token {
@@ -260,7 +260,7 @@ mod tests {
                         value: Literal::None
                     })
                 },
-                &mut Environment::new(),
+                &mut Environment::new_top_level(),
             ),
             Ok(Value::Boolean(true))
         );
@@ -280,7 +280,7 @@ mod tests {
                         value: Literal::Number(0_f64)
                     })
                 },
-                &mut Environment::new(),
+                &mut Environment::new_top_level(),
             ),
             Ok(Value::Boolean(false))
         );
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn test_global_variable() {
-        let mut environment = Environment::new();
+        let mut environment = Environment::new_top_level();
 
         let definition = Stmt::Var {
             name: Token {
