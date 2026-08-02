@@ -23,12 +23,9 @@ pub fn interpret(statements: Vec<Stmt>) -> Result<()> {
 
 fn execute(stmt: Stmt, environment: &mut Environment) -> Result<()> {
     match stmt {
-        Stmt::Expression { expression } => {
-            // We disregard the value because it is unused. We could actually optimize this
-            // entire term out.
-            let _ = evaluate(expression, environment)?;
-        }
-        Stmt::Print { expression } => {
+        // We print the value of expressions, even if print is not used. This is expected in
+        // the REPL, but maybe not when running a file.
+        Stmt::Expression { expression } | Stmt::Print { expression } => {
             let value = evaluate(expression, environment)?;
             println!("{}", value);
         }
