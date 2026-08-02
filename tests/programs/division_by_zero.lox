@@ -1,0 +1,4 @@
+1 / 0;
+
+//! Cannot divide by zero
+//! [line 0]
