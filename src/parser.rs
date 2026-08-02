@@ -91,8 +91,31 @@ impl Parser {
         Ok(Stmt::Expression { expression: value })
     }
 
+    /// expression → assignment ;
+    /// assignment → IDENTIFIER "=" assignment
+    ///            | equality ;
+    fn assignment(&mut self) -> Result<Expr> {
+        let expr = self.equality()?;
+
+        if self.match_types(&[TokenType::Equal]) {
+            let equals = self.previous();
+            let value = self.assignment()?;
+
+            if let Expr::Variable { name } = expr {
+                return Ok(Expr::Assign {
+                    name,
+                    value: Box::new(value),
+                });
+            }
+
+            return Err(self.error(equals, "Invalid assignment target".to_string()));
+        }
+
+        Ok(expr)
+    }
+
     fn expression(&mut self) -> Result<Expr> {
-        self.equality()
+        self.assignment()
     }
 
     fn equality(&mut self) -> Result<Expr> {
@@ -473,6 +496,119 @@ mod tests {
                 right: Box::new(Expr::Literal {
                     value: Literal::Number(32_f64)
                 }),
+            })
+        );
+    }
+
+    #[test]
+    fn test_assignment() {
+        // a = 4;
+        let tokens = vec![
+            Token {
+                token_type: TokenType::Identifier,
+                lexeme: "a".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Equal,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: "".to_string(),
+                literal: Literal::Number(4_f64),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Eof,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+        ];
+        let mut parser = Parser::new(tokens);
+        assert_eq!(
+            parser.assignment(),
+            Ok(Expr::Assign {
+                name: Token {
+                    token_type: TokenType::Identifier,
+                    lexeme: "a".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                value: Box::new(Expr::Literal {
+                    value: Literal::Number(4_f64)
+                }),
+            })
+        );
+    }
+
+    #[test]
+    fn test_nested_assignment() {
+        //  Nested assignment is not a syntax error. The value of an assignment expression is the
+        //  rhs, so we allow the following program: a = b = 4;
+        let tokens = vec![
+            Token {
+                token_type: TokenType::Identifier,
+                lexeme: "a".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Equal,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Identifier,
+                lexeme: "b".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Equal,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: "".to_string(),
+                literal: Literal::Number(4_f64),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Eof,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+        ];
+        let mut parser = Parser::new(tokens);
+        assert_eq!(
+            parser.assignment(),
+            Ok(Expr::Assign {
+                name: Token {
+                    token_type: TokenType::Identifier,
+                    lexeme: "a".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                value: Box::new(Expr::Assign {
+                    name: Token {
+                        token_type: TokenType::Identifier,
+                        lexeme: "b".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    value: Box::new(Expr::Literal {
+                        value: Literal::Number(4_f64)
+                    }),
+                })
             })
         );
     }

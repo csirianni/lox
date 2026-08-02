@@ -32,8 +32,8 @@ impl Environment {
     ///
     /// The key difference between assignment and definition is that assignment is not allowed to
     /// create a new variable.
-    pub fn assign(&mut self, name: &str, value: Value) -> Option<Value> {
-        if let Some(entry) = self.values.get_mut(name) {
+    pub fn assign(&mut self, name: &Token, value: Value) -> Option<Value> {
+        if let Some(entry) = self.values.get_mut(&name.lexeme) {
             let result = entry.clone();
             *entry = value;
             Some(result)
@@ -84,22 +84,28 @@ mod tests {
     fn test_assign() {
         let mut environment = Environment::new_top_level();
         environment.define("foo", Value::Number(5_f64));
-        let key = Token {
+        let foo = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
             literal: Literal::None,
             line: 0,
         };
-        assert_eq!(environment.get(&key), Some(&Value::Number(5_f64)));
+        assert_eq!(environment.get(&foo), Some(&Value::Number(5_f64)));
 
         assert_eq!(
-            environment.assign("foo", Value::Number(6_f64)),
+            environment.assign(&foo, Value::Number(6_f64)),
             Some(Value::Number(5_f64))
         );
-        assert_eq!(environment.get(&key), Some(&Value::Number(6_f64)));
+        assert_eq!(environment.get(&foo), Some(&Value::Number(6_f64)));
 
         // Undefined variable.
-        assert_eq!(environment.assign("bar", Value::Number(1_f64)), None);
+        let bar = Token {
+            token_type: TokenType::Identifier,
+            lexeme: "bar".to_string(),
+            literal: Literal::None,
+            line: 0,
+        };
+        assert_eq!(environment.assign(&bar, Value::Number(1_f64)), None);
     }
 
     #[test]
@@ -139,13 +145,13 @@ mod tests {
         tle.define("foo", Value::Number(5_f64));
 
         let mut block = Environment::new_block(tle);
-        block.assign("foo", Value::Number(3_f64));
         let key = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
             literal: Literal::None,
             line: 0,
         };
+        block.assign(&key, Value::Number(3_f64));
         assert_eq!(block.get(&key), Some(&Value::Number(3_f64)));
     }
 }

@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::token::{Literal, Token};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Literal {
         value: Literal,
@@ -22,6 +22,10 @@ pub enum Expr {
     Variable {
         name: Token,
     },
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
 }
 
 impl fmt::Display for Expr {
@@ -36,6 +40,7 @@ impl fmt::Display for Expr {
             } => write!(f, "({} {} {})", operator.lexeme, left, right),
             Expr::Grouping { expression } => write!(f, "( {} )", expression),
             Expr::Variable { name } => write!(f, "{:?}", name),
+            Expr::Assign { name, value } => write!(f, "{:?} {}", name, value),
         }
     }
 }

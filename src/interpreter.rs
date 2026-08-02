@@ -134,6 +134,17 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
                 message: format!("Undefined variable '{}'", name.lexeme),
             }),
         },
+        Expr::Assign { name, value } => {
+            let value = evaluate(*value, environment)?;
+
+            match environment.assign(&name, value.clone()) {
+                Some(_) => Ok(value),
+                None => Err(RuntimeError {
+                    token: name.clone(),
+                    message: format!("Undefined variable '{}'", name.lexeme),
+                }),
+            }
+        }
     }
 }
 
@@ -314,5 +325,53 @@ mod tests {
         let value = evaluate(lookup, &mut environment);
         assert!(value.is_ok());
         assert_eq!(value.unwrap(), Value::Number(5_f64));
+    }
+
+    #[test]
+    fn test_assignment() {
+        let mut environment = Environment::new_top_level();
+
+        let assignment = Expr::Assign {
+            name: Token {
+                token_type: TokenType::Identifier,
+                lexeme: "a".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            value: Box::new(Expr::Literal {
+                value: Literal::Number(4_f64),
+            }),
+        };
+        // We start at evaluate() here because assignment is an expression, not a statement.
+        assert_eq!(
+            evaluate(assignment.clone(), &mut environment),
+            Err(RuntimeError {
+                token: Token {
+                    token_type: TokenType::Identifier,
+                    lexeme: "a".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                message: "Undefined variable 'a'".to_string()
+            })
+        );
+
+        let definition = Stmt::Var {
+            name: Token {
+                token_type: TokenType::Identifier,
+                lexeme: "a".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            initializer: Expr::Literal {
+                value: Literal::Number(5_f64),
+            },
+        };
+        assert!(execute(definition, &mut environment).is_ok());
+
+        assert_eq!(
+            evaluate(assignment, &mut environment),
+            Ok(Value::Number(4_f64))
+        );
     }
 }
