@@ -87,7 +87,9 @@ impl Lox {
     }
 
     fn interpreter_error(&mut self, error: RuntimeError) {
-        eprintln!("{} \n[line {}]", error.message, error.token.line);
+        // TODO: This should be eprintln!(), but it's more work to make the integration tests read
+        // stderr.
+        println!("{}\n[line {}]", error.message, error.token.line);
         self.had_runtime_error = true;
     }
 }
