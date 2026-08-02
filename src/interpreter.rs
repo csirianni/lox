@@ -121,8 +121,14 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
                     TokenType::Minus => Ok(Value::Number(left - right)),
                     TokenType::Plus => Ok(Value::Number(left + right)),
                     TokenType::Slash => {
-                        // TODO: We should probably handle division by zero as a runtime error.
-                        Ok(Value::Number(left / right))
+                        if right == 0_f64 {
+                            Err(RuntimeError {
+                                token: operator,
+                                message: "Cannot divide by zero".to_string(),
+                            })
+                        } else {
+                            Ok(Value::Number(left / right))
+                        }
                     }
                     TokenType::Star => Ok(Value::Number(left * right)),
                     TokenType::Greater => Ok(Value::Boolean(left > right)),
@@ -300,6 +306,38 @@ mod tests {
                 &mut Environment::new_top_level(),
             ),
             Ok(Value::Boolean(false))
+        );
+    }
+
+    #[test]
+    fn test_divide_by_zero() {
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Number(5_f64)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::Slash,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(0_f64)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Err(RuntimeError {
+                token: Token {
+                    token_type: TokenType::Slash,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                message: "Cannot divide by zero".to_string()
+            })
         );
     }
 
