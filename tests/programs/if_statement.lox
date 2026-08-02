@@ -1,0 +1,15 @@
+if (true) 5;
+if (false) 5;
+if (true) 5; else 2;
+if (false) 5; else 2;
+
+// Short-circuiting.
+if (true) 5; else 2 / 0;
+if (false) 2 / 0; else 5;
+
+//! Value(5.0)
+
+//! Value(5.0)
+//! Value(2.0)
+//! Value(5.0)
+//! Value(5.0)
