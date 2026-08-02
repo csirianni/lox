@@ -75,6 +75,8 @@ impl Parser {
             Ok(Stmt::Block {
                 statements: self.block()?,
             })
+        } else if self.match_types(&[TokenType::If]) {
+            self.if_statement()
         } else {
             self.expression_statement()
         }
@@ -95,6 +97,34 @@ impl Parser {
 
         self.consume(TokenType::RightBrace, "Expect '}' after block".to_string())?;
         Ok(statements)
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt> {
+        let keyword = self.previous();
+        self.consume(TokenType::LeftParen, "Expect '(' after 'if'".to_string())?;
+        let condition = self.expression()?;
+        self.consume(
+            TokenType::RightParen,
+            "Expect ')' after if condition".to_string(),
+        )?;
+
+        let consq = self.statement()?;
+        if self.match_types(&[TokenType::Else]) {
+            let altern = self.statement()?;
+            Ok(Stmt::If {
+                keyword,
+                condition,
+                consq: Box::new(consq),
+                altern: Some(Box::new(altern)),
+            })
+        } else {
+            Ok(Stmt::If {
+                keyword,
+                condition,
+                consq: Box::new(consq),
+                altern: None,
+            })
+        }
     }
 
     fn expression_statement(&mut self) -> Result<Stmt> {

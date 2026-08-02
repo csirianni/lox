@@ -29,6 +29,25 @@ fn execute(stmt: Stmt, environment: &mut Environment) -> Result<()> {
             let value = evaluate(expression, environment)?;
             println!("{}", value);
         }
+        Stmt::If {
+            keyword,
+            condition,
+            consq,
+            altern,
+        } => {
+            if let Value::Boolean(b) = evaluate(condition, environment)? {
+                if b {
+                    execute(*consq, environment)?
+                } else if altern.is_some() {
+                    execute(*altern.unwrap(), environment)?
+                }
+            } else {
+                return Err(RuntimeError {
+                    token: keyword,
+                    message: "Expect 'if' conditional to evaluate to a boolean".to_string(),
+                });
+            }
+        }
         Stmt::Var { name, initializer } => {
             let value = if initializer
                 != (Expr::Literal {
@@ -417,5 +436,137 @@ mod tests {
             evaluate(assignment, &mut environment),
             Ok(Value::Number(4_f64))
         );
+    }
+
+    #[test]
+    fn test_valid_if_statement() {
+        let mut environment = Environment::new_top_level();
+
+        let if_statement = Stmt::If {
+            keyword: Token {
+                token_type: TokenType::If,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            condition: Expr::Literal {
+                value: Literal::Boolean(true),
+            },
+            consq: Box::new(Stmt::Expression {
+                expression: Expr::Literal {
+                    value: Literal::Boolean(false),
+                },
+            }),
+            altern: None,
+        };
+
+        assert_eq!(execute(if_statement, &mut environment), Ok(()));
+    }
+
+    #[test]
+    fn test_invalid_if_statement() {
+        let mut environment = Environment::new_top_level();
+
+        let if_statement = Stmt::If {
+            keyword: Token {
+                token_type: TokenType::If,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            condition: Expr::Literal {
+                value: Literal::Number(1_f64),
+            },
+            consq: Box::new(Stmt::Expression {
+                expression: Expr::Literal {
+                    value: Literal::Boolean(false),
+                },
+            }),
+            altern: None,
+        };
+
+        assert_eq!(
+            execute(if_statement, &mut environment),
+            Err(RuntimeError {
+                token: Token {
+                    token_type: TokenType::If,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                message: "Expect 'if' conditional to evaluate to a boolean".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn test_if_statement_short_circuiting() {
+        let mut environment = Environment::new_top_level();
+
+        let if_statement_consq = Stmt::If {
+            keyword: Token {
+                token_type: TokenType::If,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            condition: Expr::Literal {
+                value: Literal::Boolean(true),
+            },
+            consq: Box::new(Stmt::Expression {
+                expression: Expr::Literal {
+                    value: Literal::None,
+                },
+            }),
+            // 5 / 0 should not be evaluated; otherwise, it's a runtime error.
+            altern: Some(Box::new(Stmt::Expression {
+                expression: Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Number(5_f64),
+                    }),
+                    operator: Token {
+                        token_type: TokenType::Slash,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(0_f64),
+                    }),
+                },
+            })),
+        };
+        assert_eq!(execute(if_statement_consq, &mut environment), Ok(()));
+
+        let if_statement_altern = Stmt::If {
+            keyword: Token {
+                token_type: TokenType::If,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            condition: Expr::Literal {
+                value: Literal::Boolean(false),
+            },
+            // 5 / 0 should not be evaluated; otherwise, it's a runtime error.
+            consq: Box::new(Stmt::Expression {
+                expression: Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Number(5_f64),
+                    }),
+                    operator: Token {
+                        token_type: TokenType::Slash,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(0_f64),
+                    }),
+                },
+            }),
+            altern: None,
+        };
+        assert_eq!(execute(if_statement_altern, &mut environment), Ok(()));
     }
 }
