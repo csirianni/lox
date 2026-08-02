@@ -2,6 +2,7 @@ use crate::token::Token;
 use crate::value::Value;
 use std::collections::BTreeMap;
 
+#[derive(Clone)]
 pub struct Environment {
     enclosing: Option<Box<Environment>>,
     values: BTreeMap<String, Value>,

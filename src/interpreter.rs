@@ -44,6 +44,15 @@ fn execute(stmt: Stmt, environment: &mut Environment) -> Result<()> {
             };
             environment.define(&name.lexeme, value);
         }
+        Stmt::Block { statements } => {
+            // TODO: We don't need to copy the environment here because it is read-only. How can we
+            // implement that? Maybe Rc?
+            let mut block = Environment::new_block(environment.clone());
+
+            for stmt in statements {
+                execute(stmt, &mut block)?;
+            }
+        }
     }
     Ok(())
 }

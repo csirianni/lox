@@ -5,4 +5,5 @@ pub enum Stmt {
     Expression { expression: Expr },
     Print { expression: Expr },
     Var { name: Token, initializer: Expr },
+    Block { statements: Vec<Stmt> },
 }
