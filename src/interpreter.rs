@@ -167,7 +167,14 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
                     Ok(Value::Boolean(left))
                 }
             }
-            _ => {
+            TokenType::Minus
+            | TokenType::Plus
+            | TokenType::Slash
+            | TokenType::Star
+            | TokenType::Greater
+            | TokenType::GreaterEqual
+            | TokenType::Less
+            | TokenType::LessEqual => {
                 let Value::Number(left) = evaluate(*left, environment)? else {
                     return Err(RuntimeError {
                         token: operator,
@@ -201,6 +208,10 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
                     _ => unreachable!(),
                 }
             }
+            _ => panic!(
+                "Unexpected binary operator token type: {:?}",
+                operator.token_type
+            ),
         },
         Expr::Variable { name } => match environment.get(&name) {
             Some(value) => Ok(value.clone()),
@@ -956,5 +967,28 @@ mod tests {
             ),
             Ok(Value::Boolean(false))
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "Unexpected binary operator token type: Print")]
+    fn test_unexpected_binary_operator() {
+        evaluate(
+            Expr::Binary {
+                left: Box::new(Expr::Literal {
+                    value: Literal::Number(5_f64),
+                }),
+                operator: Token {
+                    token_type: TokenType::Print,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                right: Box::new(Expr::Literal {
+                    value: Literal::Boolean(false),
+                }),
+            },
+            &mut Environment::new_top_level(),
+        )
+        .unwrap();
     }
 }
