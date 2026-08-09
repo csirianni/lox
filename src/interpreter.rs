@@ -21,6 +21,9 @@ pub fn interpret(statements: Vec<Stmt>) -> Result<()> {
     Ok(())
 }
 
+// TODO: Consider returning Result<Value> here instead of the unit type. Value::None could be
+// considered the unit type of our language, or we could add a dedicated value to statements that
+// evaluate to nothing.
 fn execute(stmt: Stmt, environment: &mut Environment) -> Result<()> {
     match stmt {
         // We print the value of expressions, even if print is not used. This is expected in
