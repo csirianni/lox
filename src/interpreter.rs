@@ -119,14 +119,55 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
             left,
             operator,
             right,
-        } => {
-            if operator.token_type == TokenType::BangEqual
-                || operator.token_type == TokenType::EqualEqual
-            {
+        } => match operator.token_type {
+            TokenType::BangEqual | TokenType::EqualEqual => {
                 let left = evaluate(*left, environment);
                 let right = evaluate(*right, environment);
+                // FIX: This is not correct because we are comparing results, meaning that we do not
+                // use the typical bubble up approach if evaluate() returns an error.
                 Ok(Value::Boolean(left == right))
-            } else {
+            }
+            TokenType::Or => {
+                let Value::Boolean(left) = evaluate(*left, environment)? else {
+                    return Err(RuntimeError {
+                        token: operator,
+                        message: "Expected type Value::Boolean for OR operator".to_string(),
+                    });
+                };
+                if !left {
+                    let Value::Boolean(right) = evaluate(*right, environment)? else {
+                        return Err(RuntimeError {
+                            token: operator,
+                            message: "Expected type Value::Boolean for OR operator".to_string(),
+                        });
+                    };
+                    Ok(Value::Boolean(left || right))
+                } else {
+                    // Short-circuit when left is true.
+                    Ok(Value::Boolean(left))
+                }
+            }
+            TokenType::And => {
+                let Value::Boolean(left) = evaluate(*left, environment)? else {
+                    return Err(RuntimeError {
+                        token: operator,
+                        message: "Expected type Value::Boolean for AND operator".to_string(),
+                    });
+                };
+                if left {
+                    let Value::Boolean(right) = evaluate(*right, environment)? else {
+                        return Err(RuntimeError {
+                            token: operator,
+                            message: "Expected type Value::Boolean for AND operator".to_string(),
+                        });
+                    };
+                    Ok(Value::Boolean(left && right))
+                } else {
+                    // Short-circuit when left is false.
+                    Ok(Value::Boolean(left))
+                }
+            }
+            _ => {
                 let Value::Number(left) = evaluate(*left, environment)? else {
                     return Err(RuntimeError {
                         token: operator,
@@ -160,7 +201,7 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
                     _ => unreachable!(),
                 }
             }
-        }
+        },
         Expr::Variable { name } => match environment.get(&name) {
             Some(value) => Ok(value.clone()),
             None => Err(RuntimeError {
@@ -571,5 +612,349 @@ mod tests {
             altern: None,
         };
         assert_eq!(execute(if_statement_altern, &mut environment), Ok(()));
+    }
+
+    #[test]
+    fn test_logical_or_true_table() {
+        // True || False == True
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::Or,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(true))
+        );
+
+        // False || True == True
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::Or,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(true))
+        );
+
+        // True || True == True
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::Or,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(true))
+        );
+
+        // False || False == False
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::Or,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(false))
+        );
+    }
+
+    #[test]
+    fn test_logical_or_runtime_type_error() {
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::Or,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(5_f64)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Err(RuntimeError {
+                token: Token {
+                    token_type: TokenType::Or,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                message: "Expected type Value::Boolean for OR operator".to_string()
+            })
+        );
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Number(5_f64)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::Or,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Err(RuntimeError {
+                token: Token {
+                    token_type: TokenType::Or,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                message: "Expected type Value::Boolean for OR operator".to_string()
+            })
+        );
+        // Short-circuiting avoids runtime type error.
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::Or,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(5_f64)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(true))
+        );
+    }
+
+    #[test]
+    fn test_logical_and_true_table() {
+        // True || False == False
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::And,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(false))
+        );
+
+        // False || True == False
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::And,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(false))
+        );
+
+        // True || True == True
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::And,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(true))
+        );
+
+        // False || False == False
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::And,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(false))
+        );
+    }
+
+    #[test]
+    fn test_logical_and_runtime_type_error() {
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(true)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::And,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(5_f64)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Err(RuntimeError {
+                token: Token {
+                    token_type: TokenType::And,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                message: "Expected type Value::Boolean for AND operator".to_string()
+            })
+        );
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Number(5_f64)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::And,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Err(RuntimeError {
+                token: Token {
+                    token_type: TokenType::And,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                message: "Expected type Value::Boolean for AND operator".to_string()
+            })
+        );
+        // Short-circuiting avoids runtime type error.
+        assert_eq!(
+            evaluate(
+                Expr::Binary {
+                    left: Box::new(Expr::Literal {
+                        value: Literal::Boolean(false)
+                    }),
+                    operator: Token {
+                        token_type: TokenType::And,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    right: Box::new(Expr::Literal {
+                        value: Literal::Number(5_f64)
+                    })
+                },
+                &mut Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(false))
+        );
     }
 }

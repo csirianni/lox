@@ -136,11 +136,13 @@ impl Parser {
         Ok(Stmt::Expression { expression: value })
     }
 
-    /// expression → assignment ;
-    /// assignment → IDENTIFIER "=" assignment
-    ///            | equality ;
+    /// expression     → assignment ;
+    /// assignment     → IDENTIFIER "=" assignment
+    ///                | logic_or ;
+    /// logic_or       → logic_and ( "or" logic_and )* ;
+    /// logic_and      → equality ( "and" equality )* ;
     fn assignment(&mut self) -> Result<Expr> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.match_types(&[TokenType::Equal]) {
             let equals = self.previous();
@@ -161,6 +163,38 @@ impl Parser {
 
     fn expression(&mut self) -> Result<Expr> {
         self.assignment()
+    }
+
+    fn or(&mut self) -> Result<Expr> {
+        let mut expr = self.and()?;
+
+        while self.match_types(&[TokenType::Or]) {
+            let operator = self.previous();
+            let right = self.and()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<Expr> {
+        let mut expr = self.equality()?;
+
+        while self.match_types(&[TokenType::And]) {
+            let operator = self.previous();
+            let right = self.equality()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        Ok(expr)
     }
 
     fn equality(&mut self) -> Result<Expr> {
@@ -653,6 +687,102 @@ mod tests {
                     value: Box::new(Expr::Literal {
                         value: Literal::Number(4_f64)
                     }),
+                })
+            })
+        );
+    }
+
+    #[test]
+    fn test_logic_or() {
+        let tokens = vec![
+            Token {
+                token_type: TokenType::False,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Or,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: "".to_string(),
+                literal: Literal::Number(12_f64),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Eof,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+        ];
+        let mut parser = Parser::new(tokens);
+        assert_eq!(
+            parser.assignment(),
+            Ok(Expr::Binary {
+                left: Box::new(Expr::Literal {
+                    value: Literal::Boolean(false)
+                }),
+                operator: Token {
+                    token_type: TokenType::Or,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                right: Box::new(Expr::Literal {
+                    value: Literal::Number(12_f64)
+                })
+            })
+        );
+    }
+
+    #[test]
+    fn test_logic_and() {
+        let tokens = vec![
+            Token {
+                token_type: TokenType::False,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::And,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: "".to_string(),
+                literal: Literal::Number(12_f64),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Eof,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+        ];
+        let mut parser = Parser::new(tokens);
+        assert_eq!(
+            parser.assignment(),
+            Ok(Expr::Binary {
+                left: Box::new(Expr::Literal {
+                    value: Literal::Boolean(false)
+                }),
+                operator: Token {
+                    token_type: TokenType::And,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                right: Box::new(Expr::Literal {
+                    value: Literal::Number(12_f64)
                 })
             })
         );
