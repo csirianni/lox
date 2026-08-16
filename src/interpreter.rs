@@ -73,6 +73,13 @@ fn execute(stmt: Stmt, environment: Rc<RefCell<Environment>>) -> Result<()> {
                 execute(stmt, block.clone())?;
             }
         }
+        Stmt::While { condition, body } => {
+            // TODO: Consider passing by reference to avoid copies. interpret() or above would own
+            // these structs.
+            while is_true(evaluate(condition.clone(), environment.clone()))? {
+                execute(*body.clone(), environment.clone())?
+            }
+        }
     }
     Ok(())
 }
@@ -232,6 +239,17 @@ fn evaluate(expression: Expr, environment: Rc<RefCell<Environment>>) -> Result<V
                 }),
             }
         }
+    }
+}
+
+fn is_true(result: Result<Value>) -> Result<bool> {
+    if let Value::Boolean(bool) = result? {
+        Ok(bool)
+    } else {
+        Err(RuntimeError {
+            token: todo!(),
+            message: "Expected type Value::Boolean for WHILE loop".to_string(),
+        })
     }
 }
 

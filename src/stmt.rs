@@ -4,12 +4,15 @@ use crate::{expr::Expr, token::Token};
 ///                | ifStmt
 ///                | printStmt
 ///                | varStmt
-///                | block ;
+///                | block
+///                | whileStmt;
 ///
 /// block          → "{" declaration* "}" ;
 /// ifStmt         → "if" "(" expression ")" statement
 ///                ( "else" statement )? ;
-#[derive(Debug, PartialEq)]
+/// whileStmt      → "while" "(" expression ")" statement ;
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
     Expression {
         expression: Expr,
@@ -31,5 +34,9 @@ pub enum Stmt {
     },
     Block {
         statements: Vec<Stmt>,
+    },
+    While {
+        condition: Expr,
+        body: Box<Stmt>,
     },
 }

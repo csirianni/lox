@@ -68,9 +68,28 @@ impl Parser {
         Ok(Stmt::Var { name, initializer })
     }
 
+    fn while_statement(&mut self) -> Result<Stmt> {
+        self.consume(
+            TokenType::LeftParen,
+            "Expect '(' after 'while'.".to_string(),
+        )?;
+        let condition = self.expression()?;
+        self.consume(
+            TokenType::RightParen,
+            "Expect ')' after 'while'.".to_string(),
+        )?;
+        let body = self.statement()?;
+        Ok(Stmt::While {
+            condition,
+            body: Box::new(body),
+        })
+    }
+
     fn statement(&mut self) -> Result<Stmt> {
         if self.match_types(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.match_types(&[TokenType::While]) {
+            self.while_statement()
         } else if self.match_types(&[TokenType::LeftBrace]) {
             Ok(Stmt::Block {
                 statements: self.block()?,

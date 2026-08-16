@@ -1,0 +1,8 @@
+var i = 0;
+while (i < 3) {
+    i = i + 1;
+}
+
+//! Value(1.0)
+//! Value(2.0)
+//! Value(3.0)
