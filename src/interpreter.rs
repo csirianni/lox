@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
@@ -14,9 +17,9 @@ pub struct RuntimeError {
 }
 
 pub fn interpret(statements: Vec<Stmt>) -> Result<()> {
-    let mut environment = Environment::new_top_level();
+    let environment = Environment::new_top_level();
     for statement in statements.into_iter() {
-        execute(statement, &mut environment)?;
+        execute(statement, environment.clone())?
     }
     Ok(())
 }
@@ -24,7 +27,7 @@ pub fn interpret(statements: Vec<Stmt>) -> Result<()> {
 // TODO: Consider returning Result<Value> here instead of the unit type. Value::None could be
 // considered the unit type of our language, or we could add a dedicated value to statements that
 // evaluate to nothing.
-fn execute(stmt: Stmt, environment: &mut Environment) -> Result<()> {
+fn execute(stmt: Stmt, environment: Rc<RefCell<Environment>>) -> Result<()> {
     match stmt {
         // We print the value of expressions, even if print is not used. This is expected in
         // the REPL, but maybe not when running a file.
@@ -38,11 +41,11 @@ fn execute(stmt: Stmt, environment: &mut Environment) -> Result<()> {
             consq,
             altern,
         } => {
-            if let Value::Boolean(b) = evaluate(condition, environment)? {
+            if let Value::Boolean(b) = evaluate(condition, environment.clone())? {
                 if b {
                     execute(*consq, environment)?
                 } else if altern.is_some() {
-                    execute(*altern.unwrap(), environment)?
+                    execute(*altern.unwrap(), environment.clone())?
                 }
             } else {
                 return Err(RuntimeError {
@@ -56,27 +59,25 @@ fn execute(stmt: Stmt, environment: &mut Environment) -> Result<()> {
                 != (Expr::Literal {
                     value: Literal::None,
                 }) {
-                evaluate(initializer, environment)?
+                evaluate(initializer, environment.clone())?
             } else {
                 // An initializer is optional. The default value is None.
                 Value::None
             };
-            environment.define(&name.lexeme, value);
+            environment.borrow_mut().define(&name.lexeme, value);
         }
         Stmt::Block { statements } => {
-            // TODO: We don't need to copy the environment here because it is read-only. How can we
-            // implement that? Maybe Rc?
-            let mut block = Environment::new_block(environment.clone());
+            let block = Environment::new_block(environment);
 
             for stmt in statements {
-                execute(stmt, &mut block)?;
+                execute(stmt, block.clone())?;
             }
         }
     }
     Ok(())
 }
 
-fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
+fn evaluate(expression: Expr, environment: Rc<RefCell<Environment>>) -> Result<Value> {
     match expression {
         Expr::Literal { value } => match value {
             Literal::String(str) => Ok(Value::String(str)),
@@ -84,9 +85,9 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
             Literal::Boolean(bool) => Ok(Value::Boolean(bool)),
             Literal::None => Ok(Value::None),
         },
-        Expr::Grouping { expression } => evaluate(*expression, environment),
+        Expr::Grouping { expression } => evaluate(*expression, environment.clone()),
         Expr::Unary { operator, right } => {
-            let value = evaluate(*right, environment);
+            let value = evaluate(*right, environment.clone());
             match operator.token_type {
                 TokenType::Minus => {
                     let Ok(Value::Number(num)) = value else {
@@ -121,21 +122,21 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
             right,
         } => match operator.token_type {
             TokenType::BangEqual | TokenType::EqualEqual => {
-                let left = evaluate(*left, environment);
-                let right = evaluate(*right, environment);
+                let left = evaluate(*left, environment.clone());
+                let right = evaluate(*right, environment.clone());
                 // FIX: This is not correct because we are comparing results, meaning that we do not
                 // use the typical bubble up approach if evaluate() returns an error.
                 Ok(Value::Boolean(left == right))
             }
             TokenType::Or => {
-                let Value::Boolean(left) = evaluate(*left, environment)? else {
+                let Value::Boolean(left) = evaluate(*left, environment.clone())? else {
                     return Err(RuntimeError {
                         token: operator,
                         message: "Expected type Value::Boolean for OR operator".to_string(),
                     });
                 };
                 if !left {
-                    let Value::Boolean(right) = evaluate(*right, environment)? else {
+                    let Value::Boolean(right) = evaluate(*right, environment.clone())? else {
                         return Err(RuntimeError {
                             token: operator,
                             message: "Expected type Value::Boolean for OR operator".to_string(),
@@ -148,14 +149,14 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
                 }
             }
             TokenType::And => {
-                let Value::Boolean(left) = evaluate(*left, environment)? else {
+                let Value::Boolean(left) = evaluate(*left, environment.clone())? else {
                     return Err(RuntimeError {
                         token: operator,
                         message: "Expected type Value::Boolean for AND operator".to_string(),
                     });
                 };
                 if left {
-                    let Value::Boolean(right) = evaluate(*right, environment)? else {
+                    let Value::Boolean(right) = evaluate(*right, environment.clone())? else {
                         return Err(RuntimeError {
                             token: operator,
                             message: "Expected type Value::Boolean for AND operator".to_string(),
@@ -175,13 +176,13 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
             | TokenType::GreaterEqual
             | TokenType::Less
             | TokenType::LessEqual => {
-                let Value::Number(left) = evaluate(*left, environment)? else {
+                let Value::Number(left) = evaluate(*left, environment.clone())? else {
                     return Err(RuntimeError {
                         token: operator,
                         message: "Expected type Value::Number for numeric operator".to_string(),
                     });
                 };
-                let Value::Number(right) = evaluate(*right, environment)? else {
+                let Value::Number(right) = evaluate(*right, environment.clone())? else {
                     return Err(RuntimeError {
                         token: operator,
                         message: "Expected type Value::Number for numeric operator".to_string(),
@@ -213,7 +214,7 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
                 operator.token_type
             ),
         },
-        Expr::Variable { name } => match environment.get(&name) {
+        Expr::Variable { name } => match environment.borrow().get(&name) {
             Some(value) => Ok(value.clone()),
             None => Err(RuntimeError {
                 token: name.clone(),
@@ -221,9 +222,9 @@ fn evaluate(expression: Expr, environment: &mut Environment) -> Result<Value> {
             }),
         },
         Expr::Assign { name, value } => {
-            let value = evaluate(*value, environment)?;
+            let value = evaluate(*value, environment.clone())?;
 
-            match environment.assign(&name, value.clone()) {
+            match environment.borrow_mut().assign(&name, value.clone()) {
                 Some(_) => Ok(value),
                 None => Err(RuntimeError {
                     token: name.clone(),
@@ -253,7 +254,7 @@ mod tests {
                         value: Literal::Boolean(false)
                     })
                 },
-                &mut Environment::new_top_level()
+                Environment::new_top_level()
             ),
             Ok(Value::Boolean(true))
         );
@@ -270,7 +271,7 @@ mod tests {
                         value: Literal::Boolean(true)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(false))
         );
@@ -287,7 +288,7 @@ mod tests {
                         value: Literal::Number(-13_f64)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Number(13_f64))
         );
@@ -304,7 +305,7 @@ mod tests {
                         value: Literal::Number(13_f64)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Number(-13_f64))
         );
@@ -325,7 +326,7 @@ mod tests {
                         value: Literal::Number(0_f64),
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Err(RuntimeError {
                 token: Token {
@@ -357,7 +358,7 @@ mod tests {
                         value: Literal::None
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(true))
         );
@@ -377,7 +378,7 @@ mod tests {
                         value: Literal::Number(0_f64)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(false))
         );
@@ -401,7 +402,7 @@ mod tests {
                         value: Literal::Number(0_f64)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Err(RuntimeError {
                 token: Token {
@@ -417,7 +418,7 @@ mod tests {
 
     #[test]
     fn test_global_variable() {
-        let mut environment = Environment::new_top_level();
+        let environment = Environment::new_top_level();
 
         let definition = Stmt::Var {
             name: Token {
@@ -430,7 +431,7 @@ mod tests {
                 value: Literal::Number(5_f64),
             },
         };
-        assert!(execute(definition, &mut environment).is_ok());
+        assert!(execute(definition, environment.clone()).is_ok());
 
         let lookup = Expr::Variable {
             name: Token {
@@ -440,7 +441,7 @@ mod tests {
                 line: 0,
             },
         };
-        let value = evaluate(lookup, &mut environment);
+        let value = evaluate(lookup, environment.clone());
         assert!(value.is_ok());
         assert_eq!(value.unwrap(), Value::Number(5_f64));
     }
@@ -462,7 +463,7 @@ mod tests {
         };
         // We start at evaluate() here because assignment is an expression, not a statement.
         assert_eq!(
-            evaluate(assignment.clone(), &mut environment),
+            evaluate(assignment.clone(), environment.clone()),
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::Identifier,
@@ -485,17 +486,17 @@ mod tests {
                 value: Literal::Number(5_f64),
             },
         };
-        assert!(execute(definition, &mut environment).is_ok());
+        assert!(execute(definition, environment.clone()).is_ok());
 
         assert_eq!(
-            evaluate(assignment, &mut environment),
+            evaluate(assignment, environment.clone()),
             Ok(Value::Number(4_f64))
         );
     }
 
     #[test]
     fn test_valid_if_statement() {
-        let mut environment = Environment::new_top_level();
+        let environment = Environment::new_top_level();
 
         let if_statement = Stmt::If {
             keyword: Token {
@@ -515,12 +516,12 @@ mod tests {
             altern: None,
         };
 
-        assert_eq!(execute(if_statement, &mut environment), Ok(()));
+        assert_eq!(execute(if_statement, environment.clone()), Ok(()));
     }
 
     #[test]
     fn test_invalid_if_statement() {
-        let mut environment = Environment::new_top_level();
+        let environment = Environment::new_top_level();
 
         let if_statement = Stmt::If {
             keyword: Token {
@@ -541,7 +542,7 @@ mod tests {
         };
 
         assert_eq!(
-            execute(if_statement, &mut environment),
+            execute(if_statement, environment),
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::If,
@@ -556,7 +557,7 @@ mod tests {
 
     #[test]
     fn test_if_statement_short_circuiting() {
-        let mut environment = Environment::new_top_level();
+        let environment = Environment::new_top_level();
 
         let if_statement_consq = Stmt::If {
             keyword: Token {
@@ -591,7 +592,7 @@ mod tests {
                 },
             })),
         };
-        assert_eq!(execute(if_statement_consq, &mut environment), Ok(()));
+        assert_eq!(execute(if_statement_consq, environment.clone()), Ok(()));
 
         let if_statement_altern = Stmt::If {
             keyword: Token {
@@ -622,7 +623,7 @@ mod tests {
             }),
             altern: None,
         };
-        assert_eq!(execute(if_statement_altern, &mut environment), Ok(()));
+        assert_eq!(execute(if_statement_altern, environment.clone()), Ok(()));
     }
 
     #[test]
@@ -644,7 +645,7 @@ mod tests {
                         value: Literal::Boolean(false)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(true))
         );
@@ -666,7 +667,7 @@ mod tests {
                         value: Literal::Boolean(true)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(true))
         );
@@ -688,7 +689,7 @@ mod tests {
                         value: Literal::Boolean(true)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(true))
         );
@@ -710,7 +711,7 @@ mod tests {
                         value: Literal::Boolean(false)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(false))
         );
@@ -734,7 +735,7 @@ mod tests {
                         value: Literal::Number(5_f64)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Err(RuntimeError {
                 token: Token {
@@ -762,7 +763,7 @@ mod tests {
                         value: Literal::Boolean(false)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Err(RuntimeError {
                 token: Token {
@@ -791,7 +792,7 @@ mod tests {
                         value: Literal::Number(5_f64)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(true))
         );
@@ -816,7 +817,7 @@ mod tests {
                         value: Literal::Boolean(false)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(false))
         );
@@ -838,7 +839,7 @@ mod tests {
                         value: Literal::Boolean(true)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(false))
         );
@@ -860,7 +861,7 @@ mod tests {
                         value: Literal::Boolean(true)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(true))
         );
@@ -882,7 +883,7 @@ mod tests {
                         value: Literal::Boolean(false)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(false))
         );
@@ -906,7 +907,7 @@ mod tests {
                         value: Literal::Number(5_f64)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Err(RuntimeError {
                 token: Token {
@@ -934,7 +935,7 @@ mod tests {
                         value: Literal::Boolean(false)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Err(RuntimeError {
                 token: Token {
@@ -963,7 +964,7 @@ mod tests {
                         value: Literal::Number(5_f64)
                     })
                 },
-                &mut Environment::new_top_level(),
+                Environment::new_top_level(),
             ),
             Ok(Value::Boolean(false))
         );
@@ -987,7 +988,7 @@ mod tests {
                     value: Literal::Boolean(false),
                 }),
             },
-            &mut Environment::new_top_level(),
+            Environment::new_top_level(),
         )
         .unwrap();
     }

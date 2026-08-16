@@ -1,26 +1,28 @@
 use crate::token::Token;
 use crate::value::Value;
+use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::rc::Rc;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Environment {
-    enclosing: Option<Box<Environment>>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
     values: BTreeMap<String, Value>,
 }
 
 impl Environment {
-    pub fn new_top_level() -> Self {
-        Environment {
+    pub fn new_top_level() -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Environment {
             enclosing: None,
             values: BTreeMap::new(),
-        }
+        }))
     }
 
-    pub fn new_block(environment: Environment) -> Self {
-        Environment {
-            enclosing: Some(Box::new(environment)),
+    pub fn new_block(environment: Rc<RefCell<Environment>>) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Environment {
+            enclosing: Some(environment),
             values: BTreeMap::new(),
-        }
+        }))
     }
 
     // TODO: Can we consume the name here?
@@ -37,21 +39,21 @@ impl Environment {
         if let Some(entry) = self.values.get_mut(&name.lexeme) {
             let result = entry.clone();
             *entry = value;
-            Some(result)
+            Some(result.clone())
         } else {
             match &mut self.enclosing {
-                Some(enclosing) => enclosing.assign(name, value),
+                Some(enclosing) => enclosing.borrow_mut().assign(name, value),
                 None => None,
             }
         }
     }
 
-    pub fn get(&self, name: &Token) -> Option<&Value> {
+    pub fn get(&self, name: &Token) -> Option<Value> {
         if let Some(value) = self.values.get(&name.lexeme) {
-            Some(value)
+            Some(value.clone())
         } else {
             match &self.enclosing {
-                Some(enclosing) => enclosing.get(name),
+                Some(enclosing) => enclosing.borrow().get(name),
                 None => None,
             }
         }
@@ -66,38 +68,38 @@ mod tests {
 
     #[test]
     fn test_define() {
-        let mut environment = Environment::new_top_level();
-        environment.define("foo", Value::Number(5_f64));
+        let environment = Environment::new_top_level();
+        environment.borrow_mut().define("foo", Value::Number(5_f64));
         let key = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
             literal: Literal::None,
             line: 0,
         };
-        assert_eq!(environment.get(&key), Some(&Value::Number(5_f64)));
+        assert_eq!(environment.borrow().get(&key), Some(Value::Number(5_f64)));
 
         // Re-defining variables is allowed.
-        environment.define("foo", Value::Number(6_f64));
-        assert_eq!(environment.get(&key), Some(&Value::Number(6_f64)));
+        environment.borrow_mut().define("foo", Value::Number(6_f64));
+        assert_eq!(environment.borrow().get(&key), Some(Value::Number(6_f64)));
     }
 
     #[test]
     fn test_assign() {
-        let mut environment = Environment::new_top_level();
-        environment.define("foo", Value::Number(5_f64));
+        let environment = Environment::new_top_level();
+        environment.borrow_mut().define("foo", Value::Number(5_f64));
         let foo = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
             literal: Literal::None,
             line: 0,
         };
-        assert_eq!(environment.get(&foo), Some(&Value::Number(5_f64)));
+        assert_eq!(environment.borrow().get(&foo), Some(Value::Number(5_f64)));
 
         assert_eq!(
-            environment.assign(&foo, Value::Number(6_f64)),
+            environment.borrow_mut().assign(&foo, Value::Number(6_f64)),
             Some(Value::Number(5_f64))
         );
-        assert_eq!(environment.get(&foo), Some(&Value::Number(6_f64)));
+        assert_eq!(environment.borrow().get(&foo), Some(Value::Number(6_f64)));
 
         // Undefined variable.
         let bar = Token {
@@ -106,29 +108,32 @@ mod tests {
             literal: Literal::None,
             line: 0,
         };
-        assert_eq!(environment.assign(&bar, Value::Number(1_f64)), None);
+        assert_eq!(
+            environment.borrow_mut().assign(&bar, Value::Number(1_f64)),
+            None
+        );
     }
 
     #[test]
     fn test_shadowing() {
-        let mut tle = Environment::new_top_level();
-        tle.define("foo", Value::Number(5_f64));
+        let tle = Environment::new_top_level();
+        tle.borrow_mut().define("foo", Value::Number(5_f64));
 
-        let mut block = Environment::new_block(tle);
-        block.define("foo", Value::Number(3_f64));
+        let block = Environment::new_block(tle);
+        block.borrow_mut().define("foo", Value::Number(3_f64));
         let key = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
             literal: Literal::None,
             line: 0,
         };
-        assert_eq!(block.get(&key), Some(&Value::Number(3_f64)));
+        assert_eq!(block.borrow().get(&key), Some(Value::Number(3_f64)));
     }
 
     #[test]
     fn test_parent_lookup() {
-        let mut tle = Environment::new_top_level();
-        tle.define("foo", Value::Number(5_f64));
+        let tle = Environment::new_top_level();
+        tle.borrow_mut().define("foo", Value::Number(5_f64));
 
         let block = Environment::new_block(tle);
         let key = Token {
@@ -137,22 +142,22 @@ mod tests {
             literal: Literal::None,
             line: 0,
         };
-        assert_eq!(block.get(&key), Some(&Value::Number(5_f64)));
+        assert_eq!(block.borrow().get(&key), Some(Value::Number(5_f64)));
     }
 
     #[test]
     fn test_parent_assign() {
-        let mut tle = Environment::new_top_level();
-        tle.define("foo", Value::Number(5_f64));
+        let tle = Environment::new_top_level();
+        tle.borrow_mut().define("foo", Value::Number(5_f64));
 
-        let mut block = Environment::new_block(tle);
+        let block = Environment::new_block(tle);
         let key = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
             literal: Literal::None,
             line: 0,
         };
-        block.assign(&key, Value::Number(3_f64));
-        assert_eq!(block.get(&key), Some(&Value::Number(3_f64)));
+        block.borrow_mut().assign(&key, Value::Number(3_f64));
+        assert_eq!(block.borrow().get(&key), Some(Value::Number(3_f64)));
     }
 }
