@@ -4,6 +4,7 @@ use std::io::{self, Write};
 use crate::interpreter::{RuntimeError, interpret};
 use crate::parser::{Parser, ParserError};
 use crate::scanner::Scanner;
+use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::token_type::TokenType;
 
@@ -35,6 +36,23 @@ impl Lox {
         Ok(())
     }
 
+    fn run(&mut self, line: String) {
+        let mut scanner = Scanner::new(line.to_owned());
+        let tokens = scanner.scan_tokens(self);
+
+        let mut parser = Parser::new(tokens);
+        match parser.parse() {
+            Ok(statements) => {
+                if let Err(error) = interpret(statements) {
+                    self.interpreter_error(error)
+                }
+            }
+            Err(ParserError { token, message }) => {
+                self.parser_error(token, message);
+            }
+        }
+    }
+
     pub fn run_prompt(&mut self) -> io::Result<()> {
         loop {
             print!("> ");
@@ -44,28 +62,34 @@ impl Lox {
             if line.trim_end().is_empty() {
                 return Ok(());
             }
-            self.run(line);
-            // If the user makes a mistake, it shouldn’t kill their entire session.
-            self.had_error = false;
-        }
-    }
 
-    fn run(&mut self, line: String) {
-        let mut scanner = Scanner::new(line.to_owned());
-        let tokens = scanner.scan_tokens(self);
+            let mut scanner = Scanner::new(line.to_owned());
+            let tokens = scanner.scan_tokens(self);
 
-        let mut parser = Parser::new(tokens);
-        match parser.parse() {
-            Ok(statements) => {
-                // FIX: The environment is per-line right now. We need the environment to outlive
-                // this function.
-                if let Err(error) = interpret(statements) {
-                    self.interpreter_error(error)
+            let mut parser = Parser::new(tokens);
+            match parser.parse() {
+                Ok(mut statements) => {
+                    // If the last statement is an expression, we convert it to a print statement so
+                    // it is outputted in the REPL.
+                    if let Some(Stmt::Expression { .. }) = statements.last() {
+                        let expression: Stmt = statements.pop().unwrap();
+                        if let Stmt::Expression { expression } = expression {
+                            statements.push(Stmt::Print { expression });
+                        }
+                    }
+                    // FIX: The environment is per-line right now. We need the environment to outlive
+                    // this function.
+                    if let Err(error) = interpret(statements) {
+                        self.interpreter_error(error)
+                    }
+                }
+                Err(ParserError { token, message }) => {
+                    self.parser_error(token, message);
                 }
             }
-            Err(ParserError { token, message }) => {
-                self.parser_error(token, message);
-            }
+
+            // If the user makes a mistake, it shouldn’t kill their entire session.
+            self.had_error = false;
         }
     }
 

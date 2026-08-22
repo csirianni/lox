@@ -1,11 +1,11 @@
-if (true) 5;
-if (false) 5;
-if (true) 5; else 2;
-if (false) 5; else 2;
+if (true) print 5;
+if (false) print 5;
+if (true) print 5; else print 2;
+if (false) print 5; else print 2;
 
 // Short-circuiting.
-if (true) 5; else 2 / 0;
-if (false) 2 / 0; else 5;
+if (true) print 5; else 2 / 0;
+if (false) 2 / 0; else print 5;
 
 //! Value(5.0)
 
