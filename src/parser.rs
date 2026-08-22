@@ -85,11 +85,80 @@ impl Parser {
         })
     }
 
+    fn for_statement(&mut self) -> Result<Stmt> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.".to_string())?;
+
+        // The parenthetical part of a for loop is composed of three clauses:
+        // 1. Initializer: Executed exactly once, before anything else. It can be an expression, a
+        //    variable declaration, or nothing.
+        // 2. Condition: A boolean expression evaluated before each iteration. If it is false, the
+        //    loop stops.
+        // 3. Increment: Arbitrary expression evaluated at the end of each iteration.
+        let mut initializer: Option<Stmt> = None;
+        if self.match_types(&[TokenType::Var]) {
+            initializer = Some(self.var_declaration()?);
+        } else {
+            // Note that we do not allow other statement types here, unlike the Lox specification.
+            self.consume(
+                TokenType::Semicolon,
+                "Expect ';' given no loop initializer.".to_string(),
+            )?;
+        }
+
+        let mut condition: Option<Expr> = None;
+        if !self.check(TokenType::Semicolon) {
+            condition = Some(self.expression()?);
+        }
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after loop condition.".to_string(),
+        )?;
+
+        let mut increment: Option<Expr> = None;
+        if !self.check(TokenType::RightParen) {
+            increment = Some(self.expression()?);
+        }
+        self.consume(
+            TokenType::RightParen,
+            "Expect ')' after for clauses.".to_string(),
+        )?;
+
+        // for (;;) { ... } is legal syntax. We just expect one or more statements in the body.
+        let mut body: Stmt = self.statement()?;
+
+        if let Some(expression) = increment {
+            body = Stmt::Block {
+                statements: vec![body, Stmt::Expression { expression }],
+            }
+        }
+
+        if condition.is_none() {
+            condition = Some(Expr::Literal {
+                value: Literal::Boolean(true),
+            });
+        }
+
+        body = Stmt::While {
+            condition: condition.unwrap(),
+            body: Box::new(body),
+        };
+
+        if let Some(initializer) = initializer {
+            body = Stmt::Block {
+                statements: vec![initializer, body],
+            };
+        }
+
+        Ok(body)
+    }
+
     fn statement(&mut self) -> Result<Stmt> {
         if self.match_types(&[TokenType::Print]) {
             self.print_statement()
         } else if self.match_types(&[TokenType::While]) {
             self.while_statement()
+        } else if self.match_types(&[TokenType::For]) {
+            self.for_statement()
         } else if self.match_types(&[TokenType::LeftBrace]) {
             Ok(Stmt::Block {
                 statements: self.block()?,
@@ -803,6 +872,227 @@ mod tests {
                 right: Box::new(Expr::Literal {
                     value: Literal::Number(12_f64)
                 })
+            })
+        );
+    }
+
+    #[test]
+    fn test_for_loop_tokens() {
+        // for (var i = 0; i < 10; i = i + 1) print i;
+        let tokens = vec![
+            Token {
+                token_type: TokenType::For,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::LeftParen,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Var,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Identifier,
+                lexeme: "i".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Equal,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: "".to_string(),
+                literal: Literal::Number(0_f64),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Semicolon,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Identifier,
+                lexeme: "i".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Less,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: "".to_string(),
+                literal: Literal::Number(10_f64),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Semicolon,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Identifier,
+                lexeme: "i".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Equal,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Identifier,
+                lexeme: "i".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Plus,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: "".to_string(),
+                literal: Literal::Number(1_f64),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::RightParen,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Print,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Identifier,
+                lexeme: "i".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Semicolon,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Eof,
+                lexeme: "".to_string(),
+                literal: Literal::None,
+                line: 0,
+            },
+        ];
+
+        let mut parser = Parser::new(tokens);
+        assert_eq!(
+            parser.statement(),
+            Ok(Stmt::Block {
+                statements: vec![
+                    // Initializer: var i = 0;
+                    Stmt::Var {
+                        name: Token {
+                            token_type: TokenType::Identifier,
+                            lexeme: "i".to_string(),
+                            literal: Literal::None,
+                            line: 0
+                        },
+                        initializer: Expr::Literal {
+                            value: Literal::Number(0_f64)
+                        },
+                    },
+                    // Desugared while loop.
+                    Stmt::While {
+                        condition: Expr::Binary {
+                            left: Box::new(Expr::Variable {
+                                name: Token {
+                                    token_type: TokenType::Identifier,
+                                    lexeme: "i".to_string(),
+                                    literal: Literal::None,
+                                    line: 0
+                                },
+                            }),
+                            operator: Token {
+                                token_type: TokenType::Less,
+                                lexeme: "".to_string(),
+                                literal: Literal::None,
+                                line: 0
+                            },
+                            right: Box::new(Expr::Literal {
+                                value: Literal::Number(10_f64)
+                            }),
+                        },
+                        body: Box::new(Stmt::Block {
+                            statements: vec![
+                                // Body: print i;
+                                Stmt::Print {
+                                    expression: Expr::Variable {
+                                        name: Token {
+                                            token_type: TokenType::Identifier,
+                                            lexeme: "i".to_string(),
+                                            literal: Literal::None,
+                                            line: 0
+                                        },
+                                    },
+                                },
+                                // Increment: i = i + 1 (as expression statement).
+                                Stmt::Expression {
+                                    expression: Expr::Assign {
+                                        name: Token {
+                                            token_type: TokenType::Identifier,
+                                            lexeme: "i".to_string(),
+                                            literal: Literal::None,
+                                            line: 0
+                                        },
+                                        value: Box::new(Expr::Binary {
+                                            left: Box::new(Expr::Variable {
+                                                name: Token {
+                                                    token_type: TokenType::Identifier,
+                                                    lexeme: "i".to_string(),
+                                                    literal: Literal::None,
+                                                    line: 0
+                                                },
+                                            }),
+                                            operator: Token {
+                                                token_type: TokenType::Plus,
+                                                lexeme: "".to_string(),
+                                                literal: Literal::None,
+                                                line: 0
+                                            },
+                                            right: Box::new(Expr::Literal {
+                                                value: Literal::Number(1_f64)
+                                            }),
+                                        }),
+                                    },
+                                },
+                            ],
+                        }),
+                    },
+                ],
             })
         );
     }

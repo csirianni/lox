@@ -1,0 +1,7 @@
+for (var i = 0; i < 3; i = i + 1) {
+    print i;
+}
+
+//! Value(0.0)
+//! Value(1.0)
+//! Value(2.0)

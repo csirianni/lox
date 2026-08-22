@@ -1,0 +1,12 @@
+// This should not output anything.
+for (; false;) {
+    print 1;
+}
+
+var go = true;
+for (; go;) {
+    print go;
+    go = false;
+}
+
+//! Value(true)
