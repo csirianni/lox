@@ -488,29 +488,23 @@ mod tests {
         let tokens = vec![
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(5_f64),
-                line: 0,
+                ..Default::default()
             },
             // TODO: Our grammer does not support this token type yet. When we do, this should be a
             // *syntax* error.
             Token {
                 token_type: TokenType::Equal,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(12_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Eof,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
         ];
         let mut parser = Parser::new(tokens);
@@ -527,15 +521,12 @@ mod tests {
         let tokens = vec![
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(5_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Eof,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
         ];
         let mut parser = Parser::new(tokens);
@@ -552,27 +543,21 @@ mod tests {
         let tokens = vec![
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(5_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Slash,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(12_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Eof,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
         ];
         let mut parser = Parser::new(tokens);
@@ -584,9 +569,7 @@ mod tests {
                 }),
                 operator: Token {
                     token_type: TokenType::Slash,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 right: Box::new(Expr::Literal {
                     value: Literal::Number(12_f64)
@@ -600,39 +583,30 @@ mod tests {
         let tokens = vec![
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(5_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Slash,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(12_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Star,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(32_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Eof,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
         ];
         let mut parser = Parser::new(tokens);
@@ -646,9 +620,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Slash,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(12_f64)
@@ -656,9 +628,7 @@ mod tests {
                 }),
                 operator: Token {
                     token_type: TokenType::Star,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 right: Box::new(Expr::Literal {
                     value: Literal::Number(32_f64)
@@ -674,26 +644,20 @@ mod tests {
             Token {
                 token_type: TokenType::Identifier,
                 lexeme: "a".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Equal,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(4_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Eof,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
         ];
         let mut parser = Parser::new(tokens);
@@ -703,8 +667,7 @@ mod tests {
                 name: Token {
                     token_type: TokenType::Identifier,
                     lexeme: "a".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 value: Box::new(Expr::Literal {
                     value: Literal::Number(4_f64)
@@ -721,38 +684,29 @@ mod tests {
             Token {
                 token_type: TokenType::Identifier,
                 lexeme: "a".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Equal,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Identifier,
                 lexeme: "b".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Equal,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(4_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Eof,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
         ];
         let mut parser = Parser::new(tokens);
@@ -762,15 +716,13 @@ mod tests {
                 name: Token {
                     token_type: TokenType::Identifier,
                     lexeme: "a".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 value: Box::new(Expr::Assign {
                     name: Token {
                         token_type: TokenType::Identifier,
                         lexeme: "b".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     value: Box::new(Expr::Literal {
                         value: Literal::Number(4_f64)
@@ -785,27 +737,20 @@ mod tests {
         let tokens = vec![
             Token {
                 token_type: TokenType::False,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Or,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(12_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Eof,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
         ];
         let mut parser = Parser::new(tokens);
@@ -817,9 +762,7 @@ mod tests {
                 }),
                 operator: Token {
                     token_type: TokenType::Or,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 right: Box::new(Expr::Literal {
                     value: Literal::Number(12_f64)
@@ -833,27 +776,20 @@ mod tests {
         let tokens = vec![
             Token {
                 token_type: TokenType::False,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::And,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(12_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Eof,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
         ];
         let mut parser = Parser::new(tokens);
@@ -865,9 +801,7 @@ mod tests {
                 }),
                 operator: Token {
                     token_type: TokenType::And,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 right: Box::new(Expr::Literal {
                     value: Literal::Number(12_f64)
@@ -882,129 +816,95 @@ mod tests {
         let tokens = vec![
             Token {
                 token_type: TokenType::For,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::LeftParen,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Var,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Identifier,
                 lexeme: "i".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Equal,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(0_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Semicolon,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Identifier,
                 lexeme: "i".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Less,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(10_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Semicolon,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Identifier,
                 lexeme: "i".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Equal,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Identifier,
                 lexeme: "i".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Plus,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Number,
-                lexeme: "".to_string(),
                 literal: Literal::Number(1_f64),
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::RightParen,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Print,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Identifier,
                 lexeme: "i".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Semicolon,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             Token {
                 token_type: TokenType::Eof,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
         ];
 
@@ -1018,8 +918,7 @@ mod tests {
                         name: Token {
                             token_type: TokenType::Identifier,
                             lexeme: "i".to_string(),
-                            literal: Literal::None,
-                            line: 0
+                            ..Default::default()
                         },
                         initializer: Expr::Literal {
                             value: Literal::Number(0_f64)
@@ -1032,15 +931,12 @@ mod tests {
                                 name: Token {
                                     token_type: TokenType::Identifier,
                                     lexeme: "i".to_string(),
-                                    literal: Literal::None,
-                                    line: 0
+                                    ..Default::default()
                                 },
                             }),
                             operator: Token {
                                 token_type: TokenType::Less,
-                                lexeme: "".to_string(),
-                                literal: Literal::None,
-                                line: 0
+                                ..Default::default()
                             },
                             right: Box::new(Expr::Literal {
                                 value: Literal::Number(10_f64)
@@ -1054,8 +950,7 @@ mod tests {
                                         name: Token {
                                             token_type: TokenType::Identifier,
                                             lexeme: "i".to_string(),
-                                            literal: Literal::None,
-                                            line: 0
+                                            ..Default::default()
                                         },
                                     },
                                 },
@@ -1065,23 +960,19 @@ mod tests {
                                         name: Token {
                                             token_type: TokenType::Identifier,
                                             lexeme: "i".to_string(),
-                                            literal: Literal::None,
-                                            line: 0
+                                            ..Default::default()
                                         },
                                         value: Box::new(Expr::Binary {
                                             left: Box::new(Expr::Variable {
                                                 name: Token {
                                                     token_type: TokenType::Identifier,
                                                     lexeme: "i".to_string(),
-                                                    literal: Literal::None,
-                                                    line: 0
+                                                    ..Default::default()
                                                 },
                                             }),
                                             operator: Token {
                                                 token_type: TokenType::Plus,
-                                                lexeme: "".to_string(),
-                                                literal: Literal::None,
-                                                line: 0
+                                                ..Default::default()
                                             },
                                             right: Box::new(Expr::Literal {
                                                 value: Literal::Number(1_f64)

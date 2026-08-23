@@ -63,7 +63,6 @@ impl Environment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::token::Literal;
     use crate::token_type::TokenType;
 
     #[test]
@@ -73,8 +72,7 @@ mod tests {
         let key = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
-            literal: Literal::None,
-            line: 0,
+            ..Default::default()
         };
         assert_eq!(environment.borrow().get(&key), Some(Value::Number(5_f64)));
 
@@ -90,8 +88,7 @@ mod tests {
         let foo = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
-            literal: Literal::None,
-            line: 0,
+            ..Default::default()
         };
         assert_eq!(environment.borrow().get(&foo), Some(Value::Number(5_f64)));
 
@@ -105,8 +102,7 @@ mod tests {
         let bar = Token {
             token_type: TokenType::Identifier,
             lexeme: "bar".to_string(),
-            literal: Literal::None,
-            line: 0,
+            ..Default::default()
         };
         assert_eq!(
             environment.borrow_mut().assign(&bar, Value::Number(1_f64)),
@@ -124,8 +120,7 @@ mod tests {
         let key = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
-            literal: Literal::None,
-            line: 0,
+            ..Default::default()
         };
         assert_eq!(block.borrow().get(&key), Some(Value::Number(3_f64)));
     }
@@ -139,8 +134,7 @@ mod tests {
         let key = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
-            literal: Literal::None,
-            line: 0,
+            ..Default::default()
         };
         assert_eq!(block.borrow().get(&key), Some(Value::Number(5_f64)));
     }
@@ -154,8 +148,7 @@ mod tests {
         let key = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
-            literal: Literal::None,
-            line: 0,
+            ..Default::default()
         };
         block.borrow_mut().assign(&key, Value::Number(3_f64));
         assert_eq!(block.borrow().get(&key), Some(Value::Number(3_f64)));

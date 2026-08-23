@@ -1,4 +1,4 @@
-#[derive(Clone, Debug, PartialEq, Copy)]
+#[derive(Clone, Debug, PartialEq, Copy, Default)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -46,5 +46,6 @@ pub enum TokenType {
     Var,
     While,
 
+    #[default]
     Eof,
 }

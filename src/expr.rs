@@ -137,8 +137,7 @@ mod tests {
                     operator: Token {
                         token_type: TokenType::Bang,
                         lexeme: "!".to_string(),
-                        literal: Literal::None,
-                        line: 0
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(true)
@@ -161,8 +160,7 @@ mod tests {
                     operator: Token {
                         token_type: TokenType::Plus,
                         lexeme: "+".to_string(),
-                        literal: Literal::None,
-                        line: 0
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(2_f64)

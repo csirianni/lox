@@ -298,9 +298,7 @@ mod tests {
                 Expr::Unary {
                     operator: Token {
                         token_type: TokenType::Bang,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(false)
@@ -315,9 +313,7 @@ mod tests {
                 Expr::Unary {
                     operator: Token {
                         token_type: TokenType::Bang,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(true)
@@ -332,9 +328,7 @@ mod tests {
                 Expr::Unary {
                     operator: Token {
                         token_type: TokenType::Minus,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(-13_f64)
@@ -349,9 +343,7 @@ mod tests {
                 Expr::Unary {
                     operator: Token {
                         token_type: TokenType::Minus,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(13_f64)
@@ -370,9 +362,7 @@ mod tests {
                 Expr::Unary {
                     operator: Token {
                         token_type: TokenType::Bang,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(0_f64),
@@ -383,9 +373,7 @@ mod tests {
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::Bang,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 message: "Expected type Value::Boolean for ! operator".to_string()
             })
@@ -402,9 +390,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::EqualEqual,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::None
@@ -422,9 +408,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::EqualEqual,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(0_f64)
@@ -446,9 +430,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Slash,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(0_f64)
@@ -459,9 +441,7 @@ mod tests {
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::Slash,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 message: "Cannot divide by zero".to_string()
             })
@@ -476,8 +456,7 @@ mod tests {
             name: Token {
                 token_type: TokenType::Identifier,
                 lexeme: "a".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             initializer: Expr::Literal {
                 value: Literal::Number(5_f64),
@@ -489,8 +468,7 @@ mod tests {
             name: Token {
                 token_type: TokenType::Identifier,
                 lexeme: "a".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
         };
         let value = evaluate(lookup, environment.clone());
@@ -506,8 +484,7 @@ mod tests {
             name: Token {
                 token_type: TokenType::Identifier,
                 lexeme: "a".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             value: Box::new(Expr::Literal {
                 value: Literal::Number(4_f64),
@@ -520,8 +497,7 @@ mod tests {
                 token: Token {
                     token_type: TokenType::Identifier,
                     lexeme: "a".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 message: "Undefined variable 'a'".to_string()
             })
@@ -531,8 +507,7 @@ mod tests {
             name: Token {
                 token_type: TokenType::Identifier,
                 lexeme: "a".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             initializer: Expr::Literal {
                 value: Literal::Number(5_f64),
@@ -553,9 +528,7 @@ mod tests {
         let if_statement = Stmt::If {
             keyword: Token {
                 token_type: TokenType::If,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             condition: Expr::Literal {
                 value: Literal::Boolean(true),
@@ -578,9 +551,7 @@ mod tests {
         let if_statement = Stmt::If {
             keyword: Token {
                 token_type: TokenType::If,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             condition: Expr::Literal {
                 value: Literal::Number(1_f64),
@@ -598,9 +569,7 @@ mod tests {
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::If,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 message: "Expect 'if' conditional to evaluate to a boolean".to_string()
             })
@@ -614,9 +583,7 @@ mod tests {
         let if_statement_consq = Stmt::If {
             keyword: Token {
                 token_type: TokenType::If,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             condition: Expr::Literal {
                 value: Literal::Boolean(true),
@@ -634,9 +601,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Slash,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(0_f64),
@@ -649,9 +614,7 @@ mod tests {
         let if_statement_altern = Stmt::If {
             keyword: Token {
                 token_type: TokenType::If,
-                lexeme: "".to_string(),
-                literal: Literal::None,
-                line: 0,
+                ..Default::default()
             },
             condition: Expr::Literal {
                 value: Literal::Boolean(false),
@@ -664,9 +627,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Slash,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(0_f64),
@@ -689,9 +650,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Or,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(false)
@@ -711,9 +670,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Or,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(true)
@@ -733,9 +690,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Or,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(true)
@@ -755,9 +710,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Or,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(false)
@@ -779,9 +732,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Or,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(5_f64)
@@ -792,9 +743,7 @@ mod tests {
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::Or,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 message: "Expected type Value::Boolean for OR operator".to_string()
             })
@@ -807,9 +756,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Or,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(false)
@@ -820,9 +767,7 @@ mod tests {
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::Or,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 message: "Expected type Value::Boolean for OR operator".to_string()
             })
@@ -836,9 +781,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::Or,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(5_f64)
@@ -861,9 +804,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::And,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(false)
@@ -883,9 +824,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::And,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(true)
@@ -905,9 +844,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::And,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(true)
@@ -927,9 +864,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::And,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(false)
@@ -951,9 +886,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::And,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(5_f64)
@@ -964,9 +897,7 @@ mod tests {
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::And,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 message: "Expected type Value::Boolean for AND operator".to_string()
             })
@@ -979,9 +910,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::And,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Boolean(false)
@@ -992,9 +921,7 @@ mod tests {
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::And,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 message: "Expected type Value::Boolean for AND operator".to_string()
             })
@@ -1008,9 +935,7 @@ mod tests {
                     }),
                     operator: Token {
                         token_type: TokenType::And,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     right: Box::new(Expr::Literal {
                         value: Literal::Number(5_f64)
@@ -1032,9 +957,7 @@ mod tests {
                 }),
                 operator: Token {
                     token_type: TokenType::Print,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 right: Box::new(Expr::Literal {
                     value: Literal::Boolean(false),
@@ -1059,9 +982,7 @@ mod tests {
                     }),
                     paren: Token {
                         token_type: TokenType::LeftParen,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     arguments: Vec::new(),
                 },
@@ -1080,16 +1001,13 @@ mod tests {
                             name: Token {
                                 token_type: TokenType::Identifier,
                                 lexeme: "foo".to_string(),
-                                literal: Literal::None,
-                                line: 0,
+                                ..Default::default()
                             }
                         }),
                     }),
                     paren: Token {
                         token_type: TokenType::LeftParen,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     arguments: vec![Expr::Literal {
                         value: Literal::Boolean(false),
@@ -1111,31 +1029,25 @@ mod tests {
                                 name: Token {
                                     token_type: TokenType::Identifier,
                                     lexeme: "x".to_string(),
-                                    literal: Literal::None,
-                                    line: 0,
+                                    ..Default::default()
                                 }
                             }),
                             operator: Token {
                                 token_type: TokenType::Plus,
-                                lexeme: "".to_string(),
-                                literal: Literal::None,
-                                line: 0,
+                                ..Default::default()
                             },
                             right: Box::new(Expr::Variable {
                                 name: Token {
                                     token_type: TokenType::Identifier,
                                     lexeme: "y".to_string(),
-                                    literal: Literal::None,
-                                    line: 0,
+                                    ..Default::default()
                                 }
                             }),
                         })
                     }),
                     paren: Token {
                         token_type: TokenType::LeftParen,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     arguments: vec![
                         Expr::Literal {
@@ -1160,9 +1072,7 @@ mod tests {
                     }),
                     paren: Token {
                         token_type: TokenType::LeftParen,
-                        lexeme: "".to_string(),
-                        literal: Literal::None,
-                        line: 0,
+                        ..Default::default()
                     },
                     arguments: Vec::new(),
                 },
@@ -1171,9 +1081,7 @@ mod tests {
             Err(RuntimeError {
                 token: Token {
                     token_type: TokenType::LeftParen,
-                    lexeme: "".to_string(),
-                    literal: Literal::None,
-                    line: 0,
+                    ..Default::default()
                 },
                 message: "Literal { value: Number(5.0) } is not a function".to_string()
             })
