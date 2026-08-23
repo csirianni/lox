@@ -242,6 +242,37 @@ fn evaluate(expression: Expr, environment: Rc<RefCell<Environment>>) -> Result<V
                 }),
             }
         }
+        Expr::Fun { params, body } => Ok(Value::Fun {
+            params,
+            body,
+            environment: environment.clone(),
+        }),
+        Expr::Call {
+            fun,
+            paren,
+            arguments,
+        } => {
+            if let Value::Fun {
+                params,
+                body,
+                environment,
+            } = evaluate(*fun.clone(), environment.clone())?
+            {
+                // TODO: Rename `environment` because the shadowing is confusing.
+                for (param, argument) in std::iter::zip(params, arguments) {
+                    environment
+                        .borrow_mut()
+                        .define(&param, evaluate(argument, environment.clone())?);
+                }
+
+                evaluate(*body, environment.clone())
+            } else {
+                Err(RuntimeError {
+                    token: paren,
+                    message: format!("{:?} is not a function", fun),
+                })
+            }
+        }
     }
 }
 
@@ -469,7 +500,7 @@ mod tests {
 
     #[test]
     fn test_assignment() {
-        let mut environment = Environment::new_top_level();
+        let environment = Environment::new_top_level();
 
         let assignment = Expr::Assign {
             name: Token {
@@ -1012,5 +1043,142 @@ mod tests {
             Environment::new_top_level(),
         )
         .unwrap();
+    }
+
+    #[test]
+    fn test_function_application() {
+        // Zero args.
+        assert_eq!(
+            evaluate(
+                Expr::Call {
+                    fun: Box::new(Expr::Fun {
+                        params: Vec::new(),
+                        body: Box::new(Expr::Literal {
+                            value: Literal::Number(5_f64)
+                        }),
+                    }),
+                    paren: Token {
+                        token_type: TokenType::LeftParen,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    arguments: Vec::new(),
+                },
+                Environment::new_top_level(),
+            ),
+            Ok(Value::Number(5_f64))
+        );
+
+        // One arg.
+        assert_eq!(
+            evaluate(
+                Expr::Call {
+                    fun: Box::new(Expr::Fun {
+                        params: vec!["foo".to_string()],
+                        body: Box::new(Expr::Variable {
+                            name: Token {
+                                token_type: TokenType::Identifier,
+                                lexeme: "foo".to_string(),
+                                literal: Literal::None,
+                                line: 0,
+                            }
+                        }),
+                    }),
+                    paren: Token {
+                        token_type: TokenType::LeftParen,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    arguments: vec![Expr::Literal {
+                        value: Literal::Boolean(false),
+                    }],
+                },
+                Environment::new_top_level(),
+            ),
+            Ok(Value::Boolean(false))
+        );
+
+        // Two args.
+        assert_eq!(
+            evaluate(
+                Expr::Call {
+                    fun: Box::new(Expr::Fun {
+                        params: vec!["x".to_string(), "y".to_string()],
+                        body: Box::new(Expr::Binary {
+                            left: Box::new(Expr::Variable {
+                                name: Token {
+                                    token_type: TokenType::Identifier,
+                                    lexeme: "x".to_string(),
+                                    literal: Literal::None,
+                                    line: 0,
+                                }
+                            }),
+                            operator: Token {
+                                token_type: TokenType::Plus,
+                                lexeme: "".to_string(),
+                                literal: Literal::None,
+                                line: 0,
+                            },
+                            right: Box::new(Expr::Variable {
+                                name: Token {
+                                    token_type: TokenType::Identifier,
+                                    lexeme: "y".to_string(),
+                                    literal: Literal::None,
+                                    line: 0,
+                                }
+                            }),
+                        })
+                    }),
+                    paren: Token {
+                        token_type: TokenType::LeftParen,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    arguments: vec![
+                        Expr::Literal {
+                            value: Literal::Number(1_f64)
+                        },
+                        Expr::Literal {
+                            value: Literal::Number(2_f64)
+                        }
+                    ],
+                },
+                Environment::new_top_level(),
+            ),
+            Ok(Value::Number(3_f64))
+        );
+
+        // `fun` is not a function.
+        assert_eq!(
+            evaluate(
+                Expr::Call {
+                    fun: Box::new(Expr::Literal {
+                        value: Literal::Number(5_f64)
+                    }),
+                    paren: Token {
+                        token_type: TokenType::LeftParen,
+                        lexeme: "".to_string(),
+                        literal: Literal::None,
+                        line: 0,
+                    },
+                    arguments: Vec::new(),
+                },
+                Environment::new_top_level(),
+            ),
+            Err(RuntimeError {
+                token: Token {
+                    token_type: TokenType::LeftParen,
+                    lexeme: "".to_string(),
+                    literal: Literal::None,
+                    line: 0,
+                },
+                message: "Literal { value: Number(5.0) } is not a function".to_string()
+            })
+        );
+
+        // TODO: Test non-empty TLE.
     }
 }

@@ -26,22 +26,60 @@ pub enum Expr {
         name: Token,
         value: Box<Expr>,
     },
+    Fun {
+        params: Vec<String>,
+        body: Box<Expr>,
+    },
+    Call {
+        fun: Box<Expr>,
+        paren: Token,
+        arguments: Vec<Expr>,
+    },
 }
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Expr(").unwrap();
         match self {
-            Expr::Literal { value } => write!(f, "{:?}", value),
-            Expr::Unary { operator, right } => write!(f, "({} {})", operator.lexeme, right),
+            Expr::Literal { value } => {
+                write!(f, "{:?}", value).unwrap();
+            }
+            Expr::Unary { operator, right } => {
+                write!(f, "{} {}", operator.lexeme, right).unwrap();
+            }
             Expr::Binary {
                 left,
                 operator,
                 right,
-            } => write!(f, "({} {} {})", operator.lexeme, left, right),
-            Expr::Grouping { expression } => write!(f, "( {} )", expression),
-            Expr::Variable { name } => write!(f, "{:?}", name),
-            Expr::Assign { name, value } => write!(f, "{:?} {}", name, value),
+            } => {
+                write!(f, "{} {} {}", operator.lexeme, left, right).unwrap();
+            }
+            Expr::Grouping { expression } => {
+                write!(f, "Grouping({})", expression).unwrap();
+            }
+            Expr::Variable { name } => {
+                write!(f, "{:?}", name).unwrap();
+            }
+            Expr::Assign { name, value } => {
+                write!(f, "{:?} {}", name, value).unwrap();
+            }
+            Expr::Fun { params, body } => {
+                write!(f, "Fun(params: {:?}, body: {})", params, body).unwrap();
+            }
+            Expr::Call {
+                fun: func,
+                paren,
+                arguments,
+            } => {
+                write!(
+                    f,
+                    "Call(func: {:?}, paren: {:?}, arguments: {:?})",
+                    func, paren, arguments
+                )
+                .unwrap();
+            }
         }
+        write!(f, ")")
     }
 }
 
@@ -59,7 +97,7 @@ mod tests {
                     value: Literal::None
                 }
             ),
-            "None"
+            "Expr(None)"
         );
         assert_eq!(
             format!(
@@ -68,16 +106,7 @@ mod tests {
                     value: Literal::Boolean(true)
                 }
             ),
-            "Boolean(true)"
-        );
-        assert_eq!(
-            format!(
-                "{}",
-                Expr::Literal {
-                    value: Literal::Boolean(false)
-                }
-            ),
-            "Boolean(false)"
+            "Expr(Boolean(true))"
         );
         assert_eq!(
             format!(
@@ -86,7 +115,7 @@ mod tests {
                     value: Literal::String("hi".to_string())
                 }
             ),
-            "String(\"hi\")"
+            "Expr(String(\"hi\"))"
         );
         assert_eq!(
             format!(
@@ -95,7 +124,7 @@ mod tests {
                     value: Literal::Number(42_f64)
                 }
             ),
-            "Number(42.0)"
+            "Expr(Number(42.0))"
         );
     }
 
@@ -116,7 +145,7 @@ mod tests {
                     })
                 }
             ),
-            "(! Boolean(true))"
+            "Expr(! Expr(Boolean(true)))"
         );
     }
 
@@ -140,7 +169,7 @@ mod tests {
                     })
                 }
             ),
-            "(+ Number(1.0) Number(2.0))"
+            "Expr(+ Expr(Number(1.0)) Expr(Number(2.0)))"
         );
     }
 
@@ -155,7 +184,23 @@ mod tests {
                     }),
                 }
             ),
-            "( Number(1.0) )"
+            "Expr(Grouping(Expr(Number(1.0))))"
+        );
+    }
+
+    #[test]
+    fn test_display_fun() {
+        assert_eq!(
+            format!(
+                "{}",
+                Expr::Fun {
+                    params: vec!["a".to_string(), "b".to_string()],
+                    body: Box::new(Expr::Literal {
+                        value: Literal::None
+                    })
+                }
+            ),
+            "Expr(Fun(params: [\"a\", \"b\"], body: Expr(None)))"
         );
     }
 }

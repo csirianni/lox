@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Environment {
     enclosing: Option<Rc<RefCell<Environment>>>,
     values: BTreeMap<String, Value>,
