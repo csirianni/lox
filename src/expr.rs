@@ -1,5 +1,6 @@
 use std::fmt;
 
+use crate::stmt::Stmt;
 use crate::token::{Literal, Token};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -27,8 +28,8 @@ pub enum Expr {
         value: Box<Expr>,
     },
     Fun {
-        params: Vec<String>,
-        body: Box<Expr>,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
     },
     Call {
         fun: Box<Expr>,
@@ -64,7 +65,7 @@ impl fmt::Display for Expr {
                 write!(f, "{:?} {}", name, value).unwrap();
             }
             Expr::Fun { params, body } => {
-                write!(f, "Fun(params: {:?}, body: {})", params, body).unwrap();
+                write!(f, "Fun(params: {:?}, body: {:?})", params, body).unwrap();
             }
             Expr::Call {
                 fun: func,
@@ -192,13 +193,26 @@ mod tests {
             format!(
                 "{}",
                 Expr::Fun {
-                    params: vec!["a".to_string(), "b".to_string()],
-                    body: Box::new(Expr::Literal {
-                        value: Literal::None
-                    })
+                    params: vec![
+                        Token {
+                            token_type: TokenType::Identifier,
+                            lexeme: "a".to_string(),
+                            ..Default::default()
+                        },
+                        Token {
+                            token_type: TokenType::Identifier,
+                            lexeme: "b".to_string(),
+                            ..Default::default()
+                        },
+                    ],
+                    body: vec![Stmt::Expression {
+                        expression: Expr::Literal {
+                            value: Literal::None
+                        }
+                    }]
                 }
             ),
-            "Expr(Fun(params: [\"a\", \"b\"], body: Expr(None)))"
+            "Expr(Fun(params: [Token { token_type: Identifier, lexeme: \"a\", literal: None, line: 0 }, Token { token_type: Identifier, lexeme: \"b\", literal: None, line: 0 }], body: [Expression { expression: Literal { value: None } }]))"
         );
     }
 }

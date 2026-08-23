@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
-use crate::{environment::Environment, expr::Expr};
+use crate::{environment::Environment, stmt::Stmt, token::Token};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -10,8 +10,8 @@ pub enum Value {
     Number(f64),
     Boolean(bool),
     Fun {
-        params: Vec<String>,
-        body: Box<Expr>,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
         environment: Rc<RefCell<Environment>>,
     },
     None,
@@ -30,7 +30,7 @@ impl fmt::Display for Value {
             } => {
                 write!(
                     f,
-                    "Value(Fun(params: {:?}, body: {}, environment: {:?}))",
+                    "Value(Fun(params: {:?}, body: {:?}, environment: {:?}))",
                     params, body, environment
                 )
             }
@@ -42,7 +42,9 @@ impl fmt::Display for Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::expr::Expr;
     use crate::token::Literal;
+    use crate::token_type::TokenType;
 
     #[test]
     fn test_display_string() {
@@ -68,14 +70,14 @@ mod tests {
             format!(
                 "{}",
                 Value::Fun {
-                    params: vec!["a".to_string(), "b".to_string()],
-                    body: Box::new(Expr::Literal {
+                    params: vec![Token{token_type: TokenType::Identifier, lexeme: "a".to_string(), ..Default::default()}, Token{token_type: TokenType::Identifier, lexeme: "b".to_string(), ..Default::default()}],
+                    body: vec![Stmt::Expression{expression: Expr::Literal {
                         value: Literal::None
-                    }),
+                    }}],
                     environment: Environment::new_top_level(),
                 }
             ),
-            "Value(Fun(params: [\"a\", \"b\"], body: Expr(None), environment: RefCell { value: Environment { enclosing: None, values: {} } }))".to_string()
+            "Value(Fun(params: [Token { token_type: Identifier, lexeme: \"a\", literal: None, line: 0 }, Token { token_type: Identifier, lexeme: \"b\", literal: None, line: 0 }], body: [Expression { expression: Literal { value: None } }], environment: RefCell { value: Environment { enclosing: None, values: {} } }))".to_string()
         );
     }
 

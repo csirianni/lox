@@ -32,6 +32,11 @@ pub enum Stmt {
         name: Token,
         initializer: Expr,
     },
+    Fun {
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+    },
     Block {
         statements: Vec<Stmt>,
     },

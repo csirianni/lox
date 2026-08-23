@@ -69,6 +69,17 @@ fn execute(stmt: Stmt, environment: Rc<RefCell<Environment>>) -> Result<()> {
             };
             environment.borrow_mut().define(&name.lexeme, value);
         }
+        Stmt::Fun { name, params, body } => {
+            environment.borrow_mut().define(
+                &name.lexeme,
+                Value::Fun {
+                    params,
+                    body,
+                    // FIX: This is dynamic scope because it is a shared reference.
+                    environment: environment.clone(),
+                },
+            );
+        }
         Stmt::Block { statements } => {
             let block = Environment::new_block(environment);
 
@@ -259,13 +270,26 @@ fn evaluate(expression: Expr, environment: Rc<RefCell<Environment>>) -> Result<V
             } = evaluate(*fun.clone(), environment.clone())?
             {
                 // TODO: Rename `environment` because the shadowing is confusing.
+                if params.len() != arguments.len() {
+                    return Err(RuntimeError {
+                        token: paren,
+                        message: format!(
+                            "Expected {} function arguments but got {}",
+                            params.len(),
+                            arguments.len()
+                        ),
+                    });
+                }
                 for (param, argument) in std::iter::zip(params, arguments) {
                     environment
                         .borrow_mut()
-                        .define(&param, evaluate(argument, environment.clone())?);
+                        .define(&param.lexeme, evaluate(argument, environment.clone())?);
                 }
 
-                evaluate(*body, environment.clone())
+                for stmt in body {
+                    execute(stmt, environment.clone())?;
+                }
+                Ok(Value::None)
             } else {
                 Err(RuntimeError {
                     token: paren,
@@ -976,9 +1000,11 @@ mod tests {
                 Expr::Call {
                     fun: Box::new(Expr::Fun {
                         params: Vec::new(),
-                        body: Box::new(Expr::Literal {
-                            value: Literal::Number(5_f64)
-                        }),
+                        body: vec![Stmt::Expression {
+                            expression: Expr::Literal {
+                                value: Literal::Number(5_f64)
+                            }
+                        }],
                     }),
                     paren: Token {
                         token_type: TokenType::LeftParen,
@@ -988,7 +1014,8 @@ mod tests {
                 },
                 Environment::new_top_level(),
             ),
-            Ok(Value::Number(5_f64))
+            // Ok(Value::Number(5_f64))
+            Ok(Value::None)
         );
 
         // One arg.
@@ -996,14 +1023,16 @@ mod tests {
             evaluate(
                 Expr::Call {
                     fun: Box::new(Expr::Fun {
-                        params: vec!["foo".to_string()],
-                        body: Box::new(Expr::Variable {
-                            name: Token {
-                                token_type: TokenType::Identifier,
-                                lexeme: "foo".to_string(),
-                                ..Default::default()
+                        params: vec![Token {
+                            token_type: TokenType::Identifier,
+                            lexeme: "foo".to_string(),
+                            ..Default::default()
+                        }],
+                        body: vec![Stmt::Expression {
+                            expression: Expr::Literal {
+                                value: Literal::Number(5_f64)
                             }
-                        }),
+                        }],
                     }),
                     paren: Token {
                         token_type: TokenType::LeftParen,
@@ -1015,7 +1044,8 @@ mod tests {
                 },
                 Environment::new_top_level(),
             ),
-            Ok(Value::Boolean(false))
+            // Ok(Value::Boolean(false))
+            Ok(Value::None)
         );
 
         // Two args.
@@ -1023,27 +1053,40 @@ mod tests {
             evaluate(
                 Expr::Call {
                     fun: Box::new(Expr::Fun {
-                        params: vec!["x".to_string(), "y".to_string()],
-                        body: Box::new(Expr::Binary {
-                            left: Box::new(Expr::Variable {
-                                name: Token {
-                                    token_type: TokenType::Identifier,
-                                    lexeme: "x".to_string(),
-                                    ..Default::default()
-                                }
-                            }),
-                            operator: Token {
-                                token_type: TokenType::Plus,
+                        params: vec![
+                            Token {
+                                token_type: TokenType::Identifier,
+                                lexeme: "x".to_string(),
                                 ..Default::default()
                             },
-                            right: Box::new(Expr::Variable {
-                                name: Token {
-                                    token_type: TokenType::Identifier,
-                                    lexeme: "y".to_string(),
+                            Token {
+                                token_type: TokenType::Identifier,
+                                lexeme: "y".to_string(),
+                                ..Default::default()
+                            }
+                        ],
+                        body: vec![Stmt::Expression {
+                            expression: Expr::Binary {
+                                left: Box::new(Expr::Variable {
+                                    name: Token {
+                                        token_type: TokenType::Identifier,
+                                        lexeme: "x".to_string(),
+                                        ..Default::default()
+                                    }
+                                }),
+                                operator: Token {
+                                    token_type: TokenType::Plus,
                                     ..Default::default()
-                                }
-                            }),
-                        })
+                                },
+                                right: Box::new(Expr::Variable {
+                                    name: Token {
+                                        token_type: TokenType::Identifier,
+                                        lexeme: "y".to_string(),
+                                        ..Default::default()
+                                    }
+                                }),
+                            }
+                        }]
                     }),
                     paren: Token {
                         token_type: TokenType::LeftParen,
@@ -1051,16 +1094,75 @@ mod tests {
                     },
                     arguments: vec![
                         Expr::Literal {
-                            value: Literal::Number(1_f64)
+                            value: Literal::Number(1_f64),
                         },
                         Expr::Literal {
-                            value: Literal::Number(2_f64)
+                            value: Literal::Number(2_f64),
                         }
                     ],
                 },
                 Environment::new_top_level(),
             ),
-            Ok(Value::Number(3_f64))
+            // Ok(Value::Number(3_f64))
+            Ok(Value::None)
+        );
+
+        assert_eq!(
+            evaluate(
+                Expr::Call {
+                    fun: Box::new(Expr::Fun {
+                        params: vec![
+                            Token {
+                                token_type: TokenType::Identifier,
+                                lexeme: "x".to_string(),
+                                ..Default::default()
+                            },
+                            Token {
+                                token_type: TokenType::Identifier,
+                                lexeme: "y".to_string(),
+                                ..Default::default()
+                            }
+                        ],
+                        body: vec![Stmt::Expression {
+                            expression: Expr::Binary {
+                                left: Box::new(Expr::Variable {
+                                    name: Token {
+                                        token_type: TokenType::Identifier,
+                                        lexeme: "x".to_string(),
+                                        ..Default::default()
+                                    }
+                                }),
+                                operator: Token {
+                                    token_type: TokenType::Plus,
+                                    ..Default::default()
+                                },
+                                right: Box::new(Expr::Variable {
+                                    name: Token {
+                                        token_type: TokenType::Identifier,
+                                        lexeme: "y".to_string(),
+                                        ..Default::default()
+                                    }
+                                }),
+                            }
+                        }]
+                    }),
+                    paren: Token {
+                        token_type: TokenType::LeftParen,
+                        ..Default::default()
+                    },
+                    arguments: vec![Expr::Literal {
+                        value: Literal::Boolean(false),
+                    }],
+                },
+                Environment::new_top_level(),
+            ),
+            Err(RuntimeError {
+                token: Token {
+                    token_type: TokenType::LeftParen,
+                    ..Default::default()
+                },
+                message: "Expected 2 function arguments but got 1".to_string()
+            })
         );
 
         // `fun` is not a function.

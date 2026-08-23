@@ -5,6 +5,8 @@ use crate::token_type::TokenType;
 
 type Result<T> = std::result::Result<T, ParserError>;
 
+const MAX_PARAMS: usize = 255;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParserError {
     pub token: Token,
@@ -40,7 +42,9 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Stmt> {
-        let statement = if self.match_types(&[TokenType::Var]) {
+        let statement = if self.match_types(&[TokenType::Fun]) {
+            self.function_declaration()
+        } else if self.match_types(&[TokenType::Var]) {
             self.var_declaration()
         } else {
             self.statement()
@@ -50,6 +54,51 @@ impl Parser {
             self.synchronize();
         }
         statement
+    }
+
+    fn function_declaration(&mut self) -> Result<Stmt> {
+        let name = self.consume(TokenType::Identifier, "Expect function name".to_string())?;
+        self.consume(
+            TokenType::LeftParen,
+            "Expect '(' after function name".to_string(),
+        )?;
+        let mut params = Vec::new();
+        if !self.check(TokenType::RightParen) {
+            if params.len() >= MAX_PARAMS {
+                return Err(self.error(
+                    self.peek(),
+                    format!("Can't have more than {} parameters", MAX_PARAMS),
+                ));
+            }
+
+            params.push(self.consume(TokenType::Identifier, "Expect parameter name".to_string())?);
+
+            while self.match_types(&[TokenType::Comma]) {
+                if params.len() >= MAX_PARAMS {
+                    return Err(self.error(
+                        self.peek(),
+                        format!("Can't have more than {} parameters", MAX_PARAMS),
+                    ));
+                }
+
+                params.push(
+                    self.consume(TokenType::Identifier, "Expect parameter name".to_string())?,
+                );
+            }
+        }
+
+        self.consume(
+            TokenType::RightParen,
+            "Expect ')' after zero or more parameters".to_string(),
+        )?;
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expect '{' before function body".to_string(),
+        )?;
+        let body = self.block()?;
+
+        Ok(Stmt::Fun { name, params, body })
     }
 
     fn var_declaration(&mut self) -> Result<Stmt> {
@@ -363,8 +412,52 @@ impl Parser {
                 right: Box::new(right),
             })
         } else {
-            self.primary()
+            self.function_call()
         }
+    }
+
+    fn function_call(&mut self) -> Result<Expr> {
+        let mut fun = self.primary()?;
+
+        // We need to handle the case where function application is chained, e.g., foo()(), so we
+        // iterate here as long as we see a left paren.
+        loop {
+            if self.match_types(&[TokenType::LeftParen]) {
+                // TODO: Restrict the number of arguments.
+                let mut arguments = Vec::new();
+                if !self.check(TokenType::RightParen) {
+                    // We expect at least one argument.
+                    arguments.push(self.expression()?);
+
+                    // Two or more arguments are comma-separated.
+                    while self.match_types(&[TokenType::Comma]) {
+                        arguments.push(self.expression()?);
+                    }
+                }
+
+                let paren = self.consume(
+                    TokenType::RightParen,
+                    "Expect ')' after arguments".to_string(),
+                )?;
+
+                // We iteratively parse the function calls left to right, then wrap the previous
+                // function call in this function call. The AST is evaluated recursively, so the
+                // left-most function call is evaluated first. For example, given foo(a)(b)(c) which
+                // is equal to (((foo a) b) c),
+                // 1. Evaluate (foo a) = ((λ b) c)
+                // 2. Evaluate (λ b) = (λ c).
+                // 3. Evaluate (λ c) = ?.
+                fun = Expr::Call {
+                    fun: Box::new(fun),
+                    paren,
+                    arguments,
+                };
+            } else {
+                break;
+            }
+        }
+
+        Ok(fun)
     }
 
     fn primary(&mut self) -> Result<Expr> {
