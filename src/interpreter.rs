@@ -10,24 +10,45 @@ use crate::value::Value;
 
 type Result<T> = std::result::Result<T, RuntimeError>;
 
+type ExecuteResult<T> = std::result::Result<T, ExecuteError>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct RuntimeError {
     pub token: Token,
     pub message: String,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ExecuteError {
+    RuntimeError(RuntimeError),
+    // We use an error enum variant to allow execute() to propogate return values up the call stack
+    // using the ? operator.
+    ControlFlow(Value),
+}
+
+impl From<RuntimeError> for ExecuteError {
+    fn from(err: RuntimeError) -> Self {
+        ExecuteError::RuntimeError(err)
+    }
+}
+
 pub fn interpret(statements: Vec<Stmt>) -> Result<()> {
     let environment = Environment::new_top_level();
     for statement in statements.into_iter() {
-        execute(statement, environment.clone())?
+        match execute(statement, environment.clone()) {
+            // Swallow return values because they don't need to be handled by the caller.
+            Ok(()) | Err(ExecuteError::ControlFlow(_)) => {}
+            Err(ExecuteError::RuntimeError(e)) => return Err(e),
+        }
     }
+
     Ok(())
 }
 
 // TODO: Consider returning Result<Value> here instead of the unit type. Value::None could be
 // considered the unit type of our language, or we could add a dedicated value to statements that
 // evaluate to nothing.
-fn execute(stmt: Stmt, environment: Rc<RefCell<Environment>>) -> Result<()> {
+fn execute(stmt: Stmt, environment: Rc<RefCell<Environment>>) -> ExecuteResult<()> {
     match stmt {
         Stmt::Expression { expression } => {
             // We disregard the value because it is unused. We could actually optimize this
@@ -51,10 +72,10 @@ fn execute(stmt: Stmt, environment: Rc<RefCell<Environment>>) -> Result<()> {
                     execute(*altern.unwrap(), environment.clone())?
                 }
             } else {
-                return Err(RuntimeError {
+                return Err(ExecuteError::RuntimeError(RuntimeError {
                     token: keyword,
                     message: "Expect 'if' conditional to evaluate to a boolean".to_string(),
-                });
+                }));
             }
         }
         Stmt::Var { name, initializer } => {
@@ -79,6 +100,13 @@ fn execute(stmt: Stmt, environment: Rc<RefCell<Environment>>) -> Result<()> {
                     environment: environment.clone(),
                 },
             );
+        }
+        Stmt::Return { keyword: _, value } => {
+            let return_value = match value {
+                Some(expr) => evaluate(expr, environment)?,
+                None => Value::None,
+            };
+            return Err(ExecuteError::ControlFlow(return_value));
         }
         Stmt::Block { statements } => {
             let block = Environment::new_block(environment);
@@ -287,7 +315,11 @@ fn evaluate(expression: Expr, environment: Rc<RefCell<Environment>>) -> Result<V
                 }
 
                 for stmt in body {
-                    execute(stmt, environment.clone())?;
+                    match execute(stmt, environment.clone()) {
+                        Ok(()) => {}
+                        Err(ExecuteError::ControlFlow(value)) => return Ok(value),
+                        Err(ExecuteError::RuntimeError(e)) => return Err(e),
+                    }
                 }
                 Ok(Value::None)
             } else {
@@ -300,14 +332,14 @@ fn evaluate(expression: Expr, environment: Rc<RefCell<Environment>>) -> Result<V
     }
 }
 
-fn is_true(result: Result<Value>) -> Result<bool> {
+fn is_true(result: Result<Value>) -> ExecuteResult<bool> {
     if let Value::Boolean(bool) = result? {
         Ok(bool)
     } else {
-        Err(RuntimeError {
+        Err(ExecuteError::RuntimeError(RuntimeError {
             token: todo!(),
             message: "Expected type Value::Boolean for WHILE loop".to_string(),
-        })
+        }))
     }
 }
 
@@ -590,13 +622,13 @@ mod tests {
 
         assert_eq!(
             execute(if_statement, environment),
-            Err(RuntimeError {
+            Err(ExecuteError::RuntimeError(RuntimeError {
                 token: Token {
                     token_type: TokenType::If,
                     ..Default::default()
                 },
                 message: "Expect 'if' conditional to evaluate to a boolean".to_string()
-            })
+            }))
         );
     }
 
@@ -1000,10 +1032,14 @@ mod tests {
                 Expr::Call {
                     fun: Box::new(Expr::Fun {
                         params: Vec::new(),
-                        body: vec![Stmt::Expression {
-                            expression: Expr::Literal {
+                        body: vec![Stmt::Return {
+                            keyword: Token {
+                                token_type: TokenType::Return,
+                                ..Default::default()
+                            },
+                            value: Some(Expr::Literal {
                                 value: Literal::Number(5_f64)
-                            }
+                            }),
                         }],
                     }),
                     paren: Token {
@@ -1014,8 +1050,7 @@ mod tests {
                 },
                 Environment::new_top_level(),
             ),
-            // Ok(Value::Number(5_f64))
-            Ok(Value::None)
+            Ok(Value::Number(5_f64))
         );
 
         // One arg.
@@ -1028,10 +1063,18 @@ mod tests {
                             lexeme: "foo".to_string(),
                             ..Default::default()
                         }],
-                        body: vec![Stmt::Expression {
-                            expression: Expr::Literal {
-                                value: Literal::Number(5_f64)
-                            }
+                        body: vec![Stmt::Return {
+                            keyword: Token {
+                                token_type: TokenType::Return,
+                                ..Default::default()
+                            },
+                            value: Some(Expr::Variable {
+                                name: Token {
+                                    token_type: TokenType::Identifier,
+                                    lexeme: "foo".to_string(),
+                                    ..Default::default()
+                                }
+                            }),
                         }],
                     }),
                     paren: Token {
@@ -1044,8 +1087,7 @@ mod tests {
                 },
                 Environment::new_top_level(),
             ),
-            // Ok(Value::Boolean(false))
-            Ok(Value::None)
+            Ok(Value::Boolean(false))
         );
 
         // Two args.
@@ -1065,8 +1107,12 @@ mod tests {
                                 ..Default::default()
                             }
                         ],
-                        body: vec![Stmt::Expression {
-                            expression: Expr::Binary {
+                        body: vec![Stmt::Return {
+                            keyword: Token {
+                                token_type: TokenType::Return,
+                                ..Default::default()
+                            },
+                            value: Some(Expr::Binary {
                                 left: Box::new(Expr::Variable {
                                     name: Token {
                                         token_type: TokenType::Identifier,
@@ -1085,7 +1131,7 @@ mod tests {
                                         ..Default::default()
                                     }
                                 }),
-                            }
+                            }),
                         }]
                     }),
                     paren: Token {
@@ -1103,8 +1149,7 @@ mod tests {
                 },
                 Environment::new_top_level(),
             ),
-            // Ok(Value::Number(3_f64))
-            Ok(Value::None)
+            Ok(Value::Number(3_f64))
         );
 
         assert_eq!(

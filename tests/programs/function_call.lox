@@ -1,7 +1,7 @@
 fun foo(a, b) {
-    print a + b;
+    return a + b;
 }
 
-foo(1, 2);
+print foo(1, 2);
 
 //! Value(3.0)

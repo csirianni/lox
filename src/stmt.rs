@@ -37,6 +37,10 @@ pub enum Stmt {
         params: Vec<Token>,
         body: Vec<Stmt>,
     },
+    Return {
+        keyword: Token,
+        value: Option<Expr>,
+    },
     Block {
         statements: Vec<Stmt>,
     },

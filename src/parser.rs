@@ -204,6 +204,8 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt> {
         if self.match_types(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.match_types(&[TokenType::Return]) {
+            self.return_statement()
         } else if self.match_types(&[TokenType::While]) {
             self.while_statement()
         } else if self.match_types(&[TokenType::For]) {
@@ -217,6 +219,19 @@ impl Parser {
         } else {
             self.expression_statement()
         }
+    }
+
+    fn return_statement(&mut self) -> Result<Stmt> {
+        let keyword = self.previous();
+        let mut value: Option<Expr> = None;
+        if !self.check(TokenType::Semicolon) {
+            value = Some(self.expression()?);
+        }
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after return value.".to_string(),
+        )?;
+        Ok(Stmt::Return { keyword, value })
     }
 
     fn print_statement(&mut self) -> Result<Stmt> {
