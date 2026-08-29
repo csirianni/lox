@@ -88,11 +88,11 @@ fn execute(stmt: Stmt, environment: Rc<RefCell<Environment>>) -> ExecuteResult<(
                 // An initializer is optional. The default value is None.
                 Value::None
             };
-            environment.borrow_mut().define(&name.lexeme, value);
+            environment.borrow_mut().define(name.lexeme, value);
         }
         Stmt::Fun { name, params, body } => {
             environment.borrow_mut().define(
-                &name.lexeme,
+                name.lexeme,
                 Value::Fun {
                     params,
                     body,
@@ -311,7 +311,7 @@ fn evaluate(expression: Expr, environment: Rc<RefCell<Environment>>) -> Result<V
                 for (param, argument) in std::iter::zip(params, arguments) {
                     environment
                         .borrow_mut()
-                        .define(&param.lexeme, evaluate(argument, environment.clone())?);
+                        .define(param.lexeme, evaluate(argument, environment.clone())?);
                 }
 
                 for stmt in body {

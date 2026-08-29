@@ -25,9 +25,8 @@ impl Environment {
         }))
     }
 
-    // TODO: Can we consume the name here?
-    pub fn define(&mut self, name: &str, value: Value) {
-        self.values.insert(name.to_string(), value);
+    pub fn define(&mut self, name: String, value: Value) {
+        self.values.insert(name, value);
     }
 
     /// Assigns a new value to `name`, if it exists, and returns the old value. Otherwise, does
@@ -68,7 +67,9 @@ mod tests {
     #[test]
     fn test_define() {
         let environment = Environment::new_top_level();
-        environment.borrow_mut().define("foo", Value::Number(5_f64));
+        environment
+            .borrow_mut()
+            .define("foo".to_string(), Value::Number(5_f64));
         let key = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
@@ -77,14 +78,18 @@ mod tests {
         assert_eq!(environment.borrow().get(&key), Some(Value::Number(5_f64)));
 
         // Re-defining variables is allowed.
-        environment.borrow_mut().define("foo", Value::Number(6_f64));
+        environment
+            .borrow_mut()
+            .define("foo".to_string(), Value::Number(6_f64));
         assert_eq!(environment.borrow().get(&key), Some(Value::Number(6_f64)));
     }
 
     #[test]
     fn test_assign() {
         let environment = Environment::new_top_level();
-        environment.borrow_mut().define("foo", Value::Number(5_f64));
+        environment
+            .borrow_mut()
+            .define("foo".to_string(), Value::Number(5_f64));
         let foo = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
@@ -113,10 +118,13 @@ mod tests {
     #[test]
     fn test_shadowing() {
         let tle = Environment::new_top_level();
-        tle.borrow_mut().define("foo", Value::Number(5_f64));
+        tle.borrow_mut()
+            .define("foo".to_string(), Value::Number(5_f64));
 
         let block = Environment::new_block(tle);
-        block.borrow_mut().define("foo", Value::Number(3_f64));
+        block
+            .borrow_mut()
+            .define("foo".to_string(), Value::Number(3_f64));
         let key = Token {
             token_type: TokenType::Identifier,
             lexeme: "foo".to_string(),
@@ -128,7 +136,8 @@ mod tests {
     #[test]
     fn test_parent_lookup() {
         let tle = Environment::new_top_level();
-        tle.borrow_mut().define("foo", Value::Number(5_f64));
+        tle.borrow_mut()
+            .define("foo".to_string(), Value::Number(5_f64));
 
         let block = Environment::new_block(tle);
         let key = Token {
@@ -142,7 +151,8 @@ mod tests {
     #[test]
     fn test_parent_assign() {
         let tle = Environment::new_top_level();
-        tle.borrow_mut().define("foo", Value::Number(5_f64));
+        tle.borrow_mut()
+            .define("foo".to_string(), Value::Number(5_f64));
 
         let block = Environment::new_block(tle);
         let key = Token {
